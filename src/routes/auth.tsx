@@ -6,7 +6,6 @@ import { Leaf, ShieldCheck, Sprout, ArrowRight, Sparkles } from "lucide-react";
 
 import logoImg from "@/assets/BlueSky_AgrITech_Logo.png";
 import { useAuth } from "@/hooks/useAuth";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
@@ -46,7 +45,9 @@ function AuthPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && session) navigate({ to: "/app", replace: true });
+    if (!loading && session) {
+      navigate({ to: "/app", replace: true });
+    }
   }, [loading, session, navigate]);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -65,18 +66,24 @@ function AuthPage() {
 
     try {
       if (mode === "signup") {
+        const cleanName = parsed.data.displayName || parsed.data.email.split("@")[0];
+
         const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
           password: parsed.data.password,
           options: {
-            data: { display_name: parsed.data.displayName || parsed.data.email.split("@")[0] },
+            data: {
+              display_name: cleanName,
+              full_name: cleanName,
+            },
           },
         });
 
         if (error) {
+          const lowerMsg = error.message.toLowerCase();
           if (
-            error.message.toLowerCase().includes("already registered") ||
-            error.message.toLowerCase().includes("user already exists")
+            lowerMsg.includes("already registered") ||
+            lowerMsg.includes("user already exists")
           ) {
             toast.error("This email is already registered. Please sign in instead.");
             setMode("signin");
@@ -96,12 +103,15 @@ function AuthPage() {
         if (data.session) {
           navigate({ to: "/app", replace: true });
         } else {
+          // If email auto-confirmation is enabled, log them in immediately
           const loginRes = await supabase.auth.signInWithPassword({
             email: parsed.data.email,
             password: parsed.data.password,
           });
           if (!loginRes.error) {
             navigate({ to: "/app", replace: true });
+          } else {
+            toast.info("Please check your email inbox to confirm your account.");
           }
         }
       } else {
@@ -121,15 +131,23 @@ function AuthPage() {
 
   async function handleGoogle() {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/app`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err?.message || "Google authentication failed. Please verify Supabase provider settings.");
       setBusy(false);
-      toast.error("Google authentication failed.");
-      return;
     }
-    if (result.redirected) return;
   }
 
   return (
@@ -218,7 +236,6 @@ function AuthPage() {
           {/* Blackboard Form Box */}
           <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-9 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Question Floating Input: Full Name (Only in create mode) */}
               {mode === "signup" && (
                 <div>
                   <div className="relative">
@@ -245,7 +262,7 @@ function AuthPage() {
                 </div>
               )}
 
-              {/* Question Floating Input: Email */}
+              {/* Email */}
               <div>
                 <div className="relative">
                   <input
@@ -270,7 +287,7 @@ function AuthPage() {
                 )}
               </div>
 
-              {/* Question Floating Input: Password */}
+              {/* Password */}
               <div>
                 <div className="relative">
                   <input
@@ -299,7 +316,7 @@ function AuthPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
+                className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
               >
                 {busy ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -322,7 +339,7 @@ function AuthPage() {
               type="button"
               onClick={handleGoogle}
               disabled={busy}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900/50 py-3 px-4 text-xs font-medium text-slate-200 transition hover:bg-slate-800/80 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700 disabled:opacity-60"
+              className="cursor-pointer flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900/50 py-3 px-4 text-xs font-medium text-slate-200 transition hover:bg-slate-800/80 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700 disabled:opacity-60"
             >
               <GoogleIcon />
               Continue with Google Account
@@ -339,7 +356,7 @@ function AuthPage() {
                       setMode("signup");
                       setErrors({});
                     }}
-                    className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
+                    className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
                   >
                     Create account
                   </button>
@@ -353,7 +370,7 @@ function AuthPage() {
                       setMode("signin");
                       setErrors({});
                     }}
-                    className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
+                    className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
                   >
                     Sign in
                   </button>

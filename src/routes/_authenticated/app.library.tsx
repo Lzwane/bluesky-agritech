@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   BookOpen,
@@ -13,14 +13,15 @@ import {
   Info,
   Bug,
   Sparkles,
-  RefreshCw,
-  TrendingUp,
   MapPin,
   Bot,
   AlertTriangle,
+  User,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/app/library")({
   component: LibraryPage,
@@ -41,6 +42,8 @@ export interface PathologyItem {
   withholdingPeriod: string;
   highRiskSeason: string;
   isLiveGenerated?: boolean;
+  discoveredBy?: string;
+  createdAt?: string;
 }
 
 const STATIC_PATHOLOGY_DATABASE: PathologyItem[] = [
@@ -321,22 +324,127 @@ const STATIC_PATHOLOGY_DATABASE: PathologyItem[] = [
   },
 ];
 
-const CROP_CATEGORIES = ["All", "Maize", "Citrus", "Tomato", "Potato", "Avocado", "Brassicas", "Macadamia", "Sugarcane"];
+const CROP_CATEGORIES = ["All", "Maize", "Citrus", "Tomato", "Potato", "Avocado", "Brassicas", "Macadamia", "Sugarcane", "AI Research"];
 const PATHOGEN_TYPES = ["All", "Fungal", "Bacterial", "Viral", "Pest / Insect", "Nutrient Deficiency"];
 
 function LibraryPage() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCrop, setSelectedCrop] = useState("All");
   const [selectedType, setSelectedType] = useState("All");
   const [activeItem, setActiveItem] = useState<PathologyItem | null>(null);
 
-  // Dynamic AI pathology queries added by user during live sessions
-  const [aiGeneratedItems, setAiGeneratedItems] = useState<PathologyItem[]>([]);
+  // Global AI Community Discoveries (Stored in Supabase so every farmer sees them at the top)
+  const [communityPathogens, setCommunityPathogens] = useState<PathologyItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("bluesky_community_pathology");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isAiSearching, setIsAiSearching] = useState(false);
 
+  const rawMeta = (user as any)?.user_metadata;
+  const currentFarmerName = useMemo(() => {
+    return (
+      rawMeta?.full_name ||
+      rawMeta?.display_name ||
+      rawMeta?.name ||
+      user?.email?.split("@")[0] ||
+      "Farmer"
+    );
+  }, [rawMeta, user]);
+
+  // Load from Supabase and subscribe to Realtime updates from other farmers
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCommunityPathogens() {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("pathology_library")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (!error && data && isMounted) {
+          const formatted: PathologyItem[] = data.map((d: any) => ({
+            id: String(d.id),
+            name: d.name,
+            scientificName: d.scientific_name || "Pathogen species complex",
+            cropCategory: (d.crop_category || "AI Research") as PathologyItem["cropCategory"],
+            type: (d.pathogen_type || "Fungal") as PathologyItem["type"],
+            severity: (d.severity || "Moderate") as PathologyItem["severity"],
+            commonRegions: Array.isArray(d.common_regions) ? d.common_regions : ["South Africa"],
+            symptoms: Array.isArray(d.symptoms) ? d.symptoms : [],
+            organicProtocol: d.organic_protocol || "Biological control recommended.",
+            chemicalProtocol: d.chemical_protocol || "Consult registered Act 36 remedies.",
+            preventativeMeasures: Array.isArray(d.preventative_measures) ? d.preventative_measures : ["Implement strict sanitation."],
+            withholdingPeriod: d.withholding_period || "14 days",
+            highRiskSeason: d.high_risk_season || "Seasonal humid weather",
+            isLiveGenerated: true,
+            discoveredBy: d.author_name || "South African Grower",
+            createdAt: d.created_at,
+          }));
+
+          setCommunityPathogens(formatted);
+          localStorage.setItem("bluesky_community_pathology", JSON.stringify(formatted));
+        }
+      } catch (err) {
+        console.warn("Could not load community pathogens from Supabase:", err);
+      }
+    }
+
+    loadCommunityPathogens();
+
+    // Realtime channel: if another farmer compiles a dossier, it arrives on top instantly
+    const channel = supabase
+      .channel("pathology_library_realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "pathology_library" },
+        (payload: any) => {
+          const d = payload.new as any;
+          if (!d || !d.id) return;
+
+          const incoming: PathologyItem = {
+            id: String(d.id),
+            name: d.name || "Unknown Pathogen",
+            scientificName: d.scientific_name || "Pathogen species complex",
+            cropCategory: (d.crop_category || "AI Research") as PathologyItem["cropCategory"],
+            type: (d.pathogen_type || "Fungal") as PathologyItem["type"],
+            severity: (d.severity || "Moderate") as PathologyItem["severity"],
+            commonRegions: Array.isArray(d.common_regions) ? d.common_regions : ["South Africa"],
+            symptoms: Array.isArray(d.symptoms) ? d.symptoms : [],
+            organicProtocol: d.organic_protocol || "",
+            chemicalProtocol: d.chemical_protocol || "",
+            preventativeMeasures: Array.isArray(d.preventative_measures) ? d.preventative_measures : [],
+            withholdingPeriod: d.withholding_period || "14 days",
+            highRiskSeason: d.high_risk_season || "",
+            isLiveGenerated: true,
+            discoveredBy: d.author_name || "Community Farmer",
+            createdAt: d.created_at || new Date().toISOString(),
+          };
+
+          setCommunityPathogens((prev) => [
+            incoming,
+            ...prev.filter((p) => p.id !== incoming.id),
+          ]);
+          toast.info(`New pathogen dossier compiled: "${incoming.name}"`);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Community AI items are ALWAYS ordered at the top
   const allItems = useMemo(() => {
-    return [...aiGeneratedItems, ...STATIC_PATHOLOGY_DATABASE];
-  }, [aiGeneratedItems]);
+    return [...communityPathogens, ...STATIC_PATHOLOGY_DATABASE];
+  }, [communityPathogens]);
 
   const filteredItems = useMemo(() => {
     return allItems.filter((item) => {
@@ -355,7 +463,7 @@ function LibraryPage() {
     });
   }, [allItems, searchQuery, selectedCrop, selectedType]);
 
-  // AI Live Pathologist Inquiry (calls edge function / Claude)
+  // AI Live Pathologist Inquiry (Global Save to Supabase so it sits on top for everyone)
   const handleAiDeepSearch = async () => {
     if (!searchQuery.trim()) {
       toast.error("Enter a disease or pest name into the search bar first.");
@@ -371,7 +479,7 @@ function LibraryPage() {
           crop: selectedCrop !== "All" ? selectedCrop : "South African Crops",
           imageBase64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
           imageMediaType: "image/png",
-          customPrompt: `Provide an exhaustive agronomic dossier for this crop disease/pest: "${searchQuery}". Target Southern African farming conditions.`,
+          customPrompt: `Provide an exhaustive agronomic dossier for this crop disease or pest: "${searchQuery}". Target Southern African agricultural conditions.`,
         },
       });
 
@@ -379,42 +487,78 @@ function LibraryPage() {
         throw new Error(data?.error || error?.message || "AI Research endpoint unavailable");
       }
 
+      const cleanCrop = (data.crop?.includes("Citrus")
+        ? "Citrus"
+        : data.crop?.includes("Tomato")
+        ? "Tomato"
+        : data.crop?.includes("Potato")
+        ? "Potato"
+        : data.crop?.includes("Maize")
+        ? "Maize"
+        : selectedCrop !== "All"
+        ? selectedCrop
+        : "AI Research") as any;
+
+      const newId = `ai-${Date.now()}`;
       const newItem: PathologyItem = {
-        id: `ai-${Date.now()}`,
+        id: newId,
         name: data.disease_name || searchQuery,
         scientificName: data.scientific_name || "Pathogen species complex",
-        cropCategory: (data.crop?.includes("Citrus")
-          ? "Citrus"
-          : data.crop?.includes("Tomato")
-          ? "Tomato"
-          : data.crop?.includes("Potato")
-          ? "Potato"
-          : data.crop?.includes("Maize")
-          ? "Maize"
-          : "AI Research") as any,
+        cropCategory: cleanCrop,
         type: (data.pathogen_type || "Fungal") as any,
         severity: (data.severity || "Moderate") as any,
         commonRegions: ["South Africa (National Alert)"],
-        symptoms: data.symptoms_observed || ["Visual leaf symptoms identified by Agronomist AI"],
+        symptoms: data.symptoms_observed || ["Visual foliar symptoms synthesized by Agronomist AI"],
         organicProtocol: data.organic_treatment || "Apply broad-spectrum bio-fungicide preventative.",
         chemicalProtocol: data.chemical_treatment || "Refer to registered Act 36 of 1947 agricultural chemicals.",
-        preventativeMeasures: [data.preventative_measures || "Strict sanitization and crop rotation."],
+        preventativeMeasures: Array.isArray(data.preventative_measures)
+          ? data.preventative_measures
+          : [data.preventative_measures || "Strict sanitization and crop rotation."],
         withholdingPeriod: data.safety_note || "14 days standard pre-harvest interval",
         highRiskSeason: "Active seasonal cycles with high temperature and humidity",
         isLiveGenerated: true,
+        discoveredBy: currentFarmerName,
+        createdAt: new Date().toISOString(),
       };
 
-      setAiGeneratedItems((prev) => [newItem, ...prev]);
+      // 1. Instantly pin to top locally
+      setCommunityPathogens((prev) => [newItem, ...prev]);
       setActiveItem(newItem);
-      toast.success("AI Pathology Dossier compiled and added to your library!");
+
+      // 2. Persist to Supabase so it surfaces on top for EVERY farmer
+      try {
+        await (supabase as any).from("pathology_library").insert({
+          id: newItem.id,
+          author_id: user?.id || null,
+          author_name: currentFarmerName,
+          name: newItem.name,
+          scientific_name: newItem.scientificName,
+          crop_category: newItem.cropCategory,
+          pathogen_type: newItem.type,
+          severity: newItem.severity,
+          common_regions: newItem.commonRegions,
+          symptoms: newItem.symptoms,
+          organic_protocol: newItem.organicProtocol,
+          chemical_protocol: newItem.chemicalProtocol,
+          preventative_measures: newItem.preventativeMeasures,
+          withholding_period: newItem.withholdingPeriod,
+          high_risk_season: newItem.highRiskSeason,
+          created_at: newItem.createdAt,
+        });
+      } catch (dbErr) {
+        console.warn("Could not save to Supabase pathology table:", dbErr);
+      }
+
+      toast.success("AI Pathology Dossier compiled and published on top of the library!");
     } catch (err: any) {
       console.warn("AI Query fallback:", err.message);
-      // Fallback local synthesis if API has token limit
+
+      // Fallback synthesis
       const synthesizedItem: PathologyItem = {
         id: `ai-${Date.now()}`,
         name: `${searchQuery} (Agronomic Synthesis)`,
         scientificName: "Pathogen / Physiological Stress Complex",
-        cropCategory: (selectedCrop !== "All" ? selectedCrop : "Maize") as any,
+        cropCategory: (selectedCrop !== "All" ? selectedCrop : "AI Research") as any,
         type: "Fungal",
         severity: "Moderate",
         commonRegions: ["Gauteng", "Limpopo", "Mpumalanga", "North West"],
@@ -435,11 +579,35 @@ function LibraryPage() {
         withholdingPeriod: "14 days",
         highRiskSeason: "High-humidity and temperature inversion periods",
         isLiveGenerated: true,
+        discoveredBy: currentFarmerName,
+        createdAt: new Date().toISOString(),
       };
 
-      setAiGeneratedItems((prev) => [synthesizedItem, ...prev]);
+      setCommunityPathogens((prev) => [synthesizedItem, ...prev]);
       setActiveItem(synthesizedItem);
-      toast.success("Dossier compiled from offline agronomic knowledge base!");
+
+      try {
+        await (supabase as any).from("pathology_library").insert({
+          id: synthesizedItem.id,
+          author_id: user?.id || null,
+          author_name: currentFarmerName,
+          name: synthesizedItem.name,
+          scientific_name: synthesizedItem.scientificName,
+          crop_category: synthesizedItem.cropCategory,
+          pathogen_type: synthesizedItem.type,
+          severity: synthesizedItem.severity,
+          common_regions: synthesizedItem.commonRegions,
+          symptoms: synthesizedItem.symptoms,
+          organic_protocol: synthesizedItem.organicProtocol,
+          chemical_protocol: synthesizedItem.chemicalProtocol,
+          preventative_measures: synthesizedItem.preventativeMeasures,
+          withholding_period: synthesizedItem.withholdingPeriod,
+          high_risk_season: synthesizedItem.highRiskSeason,
+          created_at: synthesizedItem.createdAt,
+        });
+      } catch (_) {}
+
+      toast.success("Dossier compiled and saved to the community codex!");
     } finally {
       setIsAiSearching(false);
     }
@@ -480,7 +648,7 @@ function LibraryPage() {
               <BookOpen className="h-3.5 w-3.5" /> Pathology & Pest Reference Center
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-[11px] font-medium text-cyan-300">
-              <Bot className="h-3 w-3" /> AI-Augmented
+              <Bot className="h-3 w-3" /> Live Community Knowledge Base
             </span>
           </div>
 
@@ -488,7 +656,7 @@ function LibraryPage() {
             South African Crop Pathology & Treatment Codex
           </h1>
           <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
-            Exhaustive database of crop diseases, pests, and nutrient deficiencies with registered chemical regimens, organic protocols, and preventative strategies.
+            Exhaustive database of crop diseases, pests, and nutrient deficiencies. Any unlisted pathogen researched by any grower is automatically published on top for every farmer in real time.
           </p>
         </div>
       </div>
@@ -543,7 +711,7 @@ function LibraryPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-semibold text-slate-400 mr-1 flex items-center gap-1">
-              <Filter className="h-3 w-3" /> Quick Filter:
+              <Filter className="h-3 w-3" /> Filter:
             </span>
             {CROP_CATEGORIES.map((crop) => (
               <button
@@ -570,7 +738,7 @@ function LibraryPage() {
             {isAiSearching ? (
               <>
                 <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Generating Dossier...</span>
+                <span>Publishing to Library...</span>
               </>
             ) : (
               <>
@@ -589,9 +757,9 @@ function LibraryPage() {
             <AlertTriangle className="h-6 w-6" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-sm text-slate-200">No Indexed Record Matches "{searchQuery}"</h3>
+            <h3 className="font-bold text-sm text-slate-200">No Record Matches "{searchQuery}"</h3>
             <p className="text-xs text-slate-400 max-w-sm">
-              Click the button below to have Claude compile an agronomic profile and treatment regimen for this disease.
+              Click below to compile a real-time dossier with AI. It will automatically publish on top of the codex for all farmers.
             </p>
           </div>
           <button
@@ -599,7 +767,7 @@ function LibraryPage() {
             disabled={isAiSearching}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 transition"
           >
-            <Sparkles className="h-4 w-4" /> Research "{searchQuery}" with AI
+            <Sparkles className="h-4 w-4" /> Research & Add "{searchQuery}" to Library
           </button>
         </div>
       ) : (
@@ -608,12 +776,16 @@ function LibraryPage() {
             <div
               key={item.id}
               onClick={() => setActiveItem(item)}
-              className="group rounded-3xl border border-slate-800 bg-[#131922] hover:border-emerald-500/50 hover:bg-[#161f2c] p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden"
+              className={`group rounded-3xl border p-5 shadow-xl transition-all duration-200 flex flex-col justify-between cursor-pointer relative overflow-hidden ${
+                item.isLiveGenerated
+                  ? "border-cyan-500/40 bg-[#141d29] hover:border-cyan-400 hover:bg-[#182333]"
+                  : "border-slate-800 bg-[#131922] hover:border-emerald-500/50 hover:bg-[#161f2c]"
+              }`}
             >
               <div className="space-y-3">
                 {/* Badges Row */}
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-900 border border-slate-800 text-slate-300">
                       {item.cropCategory}
                     </span>
@@ -621,13 +793,13 @@ function LibraryPage() {
                       {getTypeIcon(item.type)} {item.type}
                     </span>
                     {item.isLiveGenerated && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-cyan-950/50 text-cyan-400 border border-cyan-800/60">
-                        <Bot className="h-2.5 w-2.5" /> AI
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 animate-pulse">
+                        <Sparkles className="h-2.5 w-2.5 text-cyan-300" /> Community AI Discovery
                       </span>
                     )}
                   </div>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSeverityBadge(
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${getSeverityBadge(
                       item.severity
                     )}`}
                   >
@@ -637,10 +809,10 @@ function LibraryPage() {
 
                 {/* Name & Latin Binomial */}
                 <div>
-                  <h3 className="font-bold text-base text-white group-hover:text-emerald-400 transition">
+                  <h3 className="font-bold text-base text-white group-hover:text-emerald-400 transition line-clamp-1">
                     {item.name}
                   </h3>
-                  <p className="text-[11px] font-mono italic text-slate-400 mt-0.5">
+                  <p className="text-[11px] font-mono italic text-slate-400 mt-0.5 truncate">
                     {item.scientificName}
                   </p>
                 </div>
@@ -649,6 +821,14 @@ function LibraryPage() {
                 <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
                   {item.symptoms[0]}
                 </p>
+
+                {/* Community metadata tag if researched by a farmer */}
+                {item.discoveredBy && (
+                  <div className="text-[10px] text-cyan-400/90 flex items-center gap-1.5 pt-1">
+                    <User className="h-3 w-3" />
+                    <span>Researched by {item.discoveredBy}</span>
+                  </div>
+                )}
               </div>
 
               {/* Card Bottom Bar */}
@@ -675,7 +855,7 @@ function LibraryPage() {
             <button
               type="button"
               onClick={() => setActiveItem(null)}
-              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition"
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
               aria-label="Close modal"
             >
               <X className="h-4 w-4" />
@@ -698,8 +878,8 @@ function LibraryPage() {
                   {activeItem.severity} Severity
                 </span>
                 {activeItem.isLiveGenerated && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-cyan-950/50 text-cyan-400 border border-cyan-800/60 flex items-center gap-1">
-                    <Bot className="h-3 w-3" /> Live Claude Synthesis
+                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-cyan-950/50 text-cyan-300 border border-cyan-700 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-cyan-400" /> Community Discovered
                   </span>
                 )}
               </div>
@@ -798,3 +978,5 @@ function LibraryPage() {
     </div>
   );
 }
+
+export default LibraryPage;

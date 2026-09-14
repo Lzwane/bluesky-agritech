@@ -9,6 +9,7 @@ import {
   VolumeX,
   X,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,24 +32,25 @@ export interface ChatMessage {
   text: string;
   imagePreviewUrl?: string;
   timestamp: string;
+  isError?: boolean;
 }
 
 const BEGINNER_STARTER_SUGGESTIONS = [
   {
     title: "Why are my leaves turning yellow?",
-    desc: "Find out what nutrients or water your plants need",
+    desc: "Diagnose nitrogen deficiency, overwatering, or fungal leaf blight",
   },
   {
     title: "How often should I water my crops?",
-    desc: "Simple irrigation advice based on your crop and soil",
+    desc: "Calculate irrigation intervals for sandy vs clay soil under high heat",
   },
   {
-    title: "How do I spot and kill bugs on my plants?",
-    desc: "Easy ways to protect your field from pests and worms",
+    title: "How do I spot and control Fall Armyworm?",
+    desc: "Inspect whorl feeding funnels and select registered treatments",
   },
   {
-    title: "What is the best fertilizer to start with?",
-    desc: "Beginner guide on what to feed your crops at planting",
+    title: "What basal fertilizer should I use at planting?",
+    desc: "NPK ratio guidelines for maize, tomatoes, and vegetables",
   },
 ];
 
@@ -168,7 +170,7 @@ function AdvisorPage() {
     window.speechSynthesis.cancel();
 
     const cleanSpokenText = rawText
-      .replace(/[#*_`>]/g, "")
+      .replace(/[#*_`>•]/g, "")
       .replace(/\[.*?\]/g, "")
       .trim();
 
@@ -235,63 +237,68 @@ function AdvisorPage() {
     }
 
     try {
-      const historyContext = messages
-        .slice(-6)
-        .map((m) => `${m.sender === "user" ? farmerName : "ADVISOR"}: ${m.text}`)
-        .join("\n\n");
-
-      const promptToSend = `Farmer Name: ${farmerName}
-
-Conversation History:
-${historyContext}
-
-Latest message or question from ${farmerName}:
-${textToSend || "Please examine this attached crop leaf photo and advise."}`;
-
-      const { data, error } = await supabase.functions.invoke("diagnose-crop", {
+      // Direct call to Supabase Edge Function without mock fallbacks
+      const response = await supabase.functions.invoke("diagnose-crop", {
         body: {
-          crop: "General Agriculture",
+          customPrompt: textToSend.trim(),
+          message: textToSend.trim(),
           imageBase64: currentImage?.base64 || "",
           imageMediaType: currentImage?.mediaType || "image/jpeg",
-          customPrompt: promptToSend,
           farmerName,
         },
       });
 
-      let advisorReply = "";
+      // Catch and surface function invocation errors (HTTP 4xx/5xx)
+      if (response.error) {
+        let detailedError = response.error.message;
 
-      if (!error && data) {
-        if (data.response) {
-          advisorReply = data.response;
-        } else if (data.text) {
-          advisorReply = data.text;
-        } else if (typeof data === "string") {
-          advisorReply = data;
-        }
+        try {
+          if ((response.error as any).context) {
+            const bodyJson = await (response.error as any).context.json();
+            detailedError = bodyJson.error || detailedError;
+          }
+        } catch (_) {}
+
+        throw new Error(detailedError);
       }
 
-      if (!advisorReply) {
-        advisorReply =
-          "To help you best, let me know what crop you are growing or describe what you notice on the leaves, and I will guide you step by step.";
+      // Check for an error payload inside a 200 response
+      if (response.data?.error) {
+        throw new Error(response.data.error);
       }
 
-      const cleanReply = advisorReply
-        .replace(/[*_#`>]/g, "")
-        .replace(/```json/gi, "")
-        .replace(/```/g, "")
-        .trim();
+      const rawReply =
+        response.data?.reply ||
+        response.data?.response ||
+        response.data?.text ||
+        (typeof response.data === "string" ? response.data : "");
 
-      const advisorMsgId = `advisor-${Date.now()}`;
+      if (!rawReply) {
+        throw new Error("Edge Function responded, but the reply field was empty.");
+      }
+
       const advisorMessage: ChatMessage = {
-        id: advisorMsgId,
+        id: `advisor-${Date.now()}`,
         sender: "advisor",
-        text: cleanReply,
+        text: rawReply.trim(),
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
       setMessages((prev) => [...prev, advisorMessage]);
-    } catch {
-      toast.error("Could not complete request. Please try again.");
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to reach Edge Function";
+      toast.error(errorMessage);
+
+      // Display the raw error directly in the chat view so you know exactly what failed
+      const errorMsgItem: ChatMessage = {
+        id: `error-${Date.now()}`,
+        sender: "advisor",
+        isError: true,
+        text: `⚠️ ERROR FROM AI ENGINE:\n\n${errorMessage}\n\nCheck Supabase Dashboard > Edge Functions > Secrets to verify your API keys.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+
+      setMessages((prev) => [...prev, errorMsgItem]);
     } finally {
       setIsTyping(false);
     }
@@ -302,24 +309,22 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
       {/* Scrollable Conversation Stream */}
       <div className="flex-1 overflow-y-auto pt-4 pb-6 space-y-6 scrollbar-none">
         {messages.length === 0 ? (
-          /* Gemini-style Zero State */
           <div className="h-full flex flex-col justify-center items-center text-center px-4 space-y-8 animate-in fade-in duration-300">
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
                 Hello, {farmerName}
               </h1>
               <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto">
-                Ask simple questions about your crops, watering, bugs, soil, or upload a leaf photo.
+                Ask questions about your crops, watering, bugs, soil, or upload a leaf photo.
               </p>
             </div>
 
-            {/* Beginner-friendly Starter Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl text-left">
               {BEGINNER_STARTER_SUGGESTIONS.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSendMessage(item.title)}
-                  className="p-4 rounded-2xl border border-slate-800 bg-[#161d26]/80 hover:bg-[#1b2430] hover:border-slate-700 transition group text-left space-y-1"
+                  className="p-4 rounded-2xl border border-slate-800 bg-[#161d26]/80 hover:bg-[#1b2430] hover:border-slate-700 transition group text-left space-y-1 cursor-pointer"
                 >
                   <div className="flex items-center justify-between text-xs font-medium text-slate-200 group-hover:text-emerald-400 transition">
                     <span>{item.title}</span>
@@ -338,7 +343,6 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
             return (
               <div key={msg.id} className="space-y-3">
                 {isUser ? (
-                  /* User Message */
                   <div className="flex justify-end">
                     <div className="max-w-2xl rounded-3xl bg-[#1e293b] text-slate-100 px-5 py-3 text-sm leading-relaxed border border-slate-700/60 shadow-sm space-y-2">
                       {msg.imagePreviewUrl && (
@@ -354,38 +358,50 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
                     </div>
                   </div>
                 ) : (
-                  /* Advisor Response */
                   <div className="flex gap-3 text-sm leading-relaxed max-w-3xl">
-                    <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shrink-0 mt-0.5 text-slate-950 font-bold text-xs shadow-sm">
-                      AI
+                    <div
+                      className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold shadow-sm ${
+                        msg.isError
+                          ? "bg-rose-500/20 border border-rose-500/40 text-rose-400"
+                          : "bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950"
+                      }`}
+                    >
+                      {msg.isError ? <AlertTriangle className="h-3.5 w-3.5" /> : "AI"}
                     </div>
                     <div className="flex-1 space-y-3">
-                      <div className="whitespace-pre-line text-slate-200 leading-relaxed">
+                      <div
+                        className={`whitespace-pre-line leading-relaxed p-4 rounded-2xl border ${
+                          msg.isError
+                            ? "bg-rose-950/20 border-rose-500/30 text-rose-300 font-mono text-xs"
+                            : "bg-[#161d26] border-slate-800 text-slate-200"
+                        }`}
+                      >
                         {msg.text}
                       </div>
 
-                      {/* Controls Bar */}
-                      <div className="flex items-center gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleSpeak(msg.id, msg.text)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition ${
-                            isCurrentlySpeaking
-                              ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                              : "border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 bg-[#161d26]/60"
-                          }`}
-                        >
-                          {isCurrentlySpeaking ? (
-                            <>
-                              <VolumeX className="h-3.5 w-3.5" /> Stop
-                            </>
-                          ) : (
-                            <>
-                              <Volume2 className="h-3.5 w-3.5" /> Listen
-                            </>
-                          )}
-                        </button>
-                      </div>
+                      {!msg.isError && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => toggleSpeak(msg.id, msg.text)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                              isCurrentlySpeaking
+                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                                : "border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 bg-[#161d26]/60"
+                            }`}
+                          >
+                            {isCurrentlySpeaking ? (
+                              <>
+                                <VolumeX className="h-3.5 w-3.5" /> Stop
+                              </>
+                            ) : (
+                              <>
+                                <Volume2 className="h-3.5 w-3.5" /> Listen
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -422,7 +438,7 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
             <span className="truncate max-w-[200px]">{attachedImage.file.name}</span>
             <button
               onClick={() => setAttachedImage(null)}
-              className="hover:text-rose-400 transition"
+              className="hover:text-rose-400 transition cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -450,7 +466,7 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Attach leaf or crop photo"
-              className="p-2 rounded-full text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+              className="p-2 rounded-full text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
             >
               <ImageIcon className="h-4 w-4" />
             </button>
@@ -467,7 +483,7 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
               type="button"
               onClick={toggleListening}
               title={isListening ? "Stop listening" : "Voice input"}
-              className={`p-2 rounded-full transition ${
+              className={`p-2 rounded-full transition cursor-pointer ${
                 isListening
                   ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
@@ -480,7 +496,7 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
               type="button"
               disabled={isTyping || (!inputMessage.trim() && !attachedImage)}
               onClick={() => handleSendMessage()}
-              className="p-2 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition disabled:opacity-30 disabled:hover:bg-emerald-500 active:scale-95"
+              className="p-2 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition disabled:opacity-30 disabled:hover:bg-emerald-500 active:scale-95 cursor-pointer"
             >
               <ArrowUp className="h-4 w-4 stroke-[2.5]" />
             </button>
@@ -488,9 +504,11 @@ ${textToSend || "Please examine this attached crop leaf photo and advise."}`;
         </div>
 
         <p className="text-[11px] text-center text-slate-500 mt-2">
-          Ask any question by voice or text. Upload photos for quick leaf checks.
+          Ask any question by voice or text. Upload photos for rapid foliar diagnostics.
         </p>
       </div>
     </div>
   );
 }
+
+export default AdvisorPage;

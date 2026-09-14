@@ -12,6 +12,7 @@ import {
   Sparkles,
   TrendingDown,
   WifiOff,
+  Clock,
 } from "lucide-react";
 
 import heroImage from "@/assets/hero-farm.jpg";
@@ -115,54 +116,60 @@ const features = [
 
 const plans = [
   {
-    name: "Monthly",
-    price: "R500",
+    name: "Free Tier",
+    price: "R0",
+    cadence: "forever free",
+    description: "Essential tools to explore the platform and connect with the community.",
+    features: [
+      "Access to Field Dashboard",
+      "Custom Farmer User Profile",
+      "Marketplace Access (Browse only)",
+      "General AI Assistant Access",
+      "All 11 South African languages",
+    ],
+    cta: "Start Free",
+    featured: false,
+  },
+  {
+    name: "Start Plan",
+    price: "R100",
     cadence: "per month",
-    description: "For smallholders who want diagnostics on demand.",
+    description: "Unlock all system modules with a limited monthly allocation of crop scans.",
     features: [
-      "Unlimited AI crop diagnoses",
-      "Full disease & pest library",
-      "Farmers forum access",
-      "All 11 languages",
+      "Everything in Free Tier",
+      "Every Page & Module Unlocked",
+      "Limited AI Crop Scans (10 / month)",
+      "40 AI Agronomist Chats / month",
+      "Full Pathology Disease Library",
+      "Full Farmers Forum participation",
+      "Includes 30-Day Free Trial",
     ],
-    cta: "Start monthly",
+    cta: "Choose Start Plan",
     featured: false,
   },
   {
-    name: "Seasonal",
-    price: "R1 500",
-    cadence: "per season",
-    description: "Best value for a full planting-to-harvest cycle.",
+    name: "Growth Plan",
+    price: "R200",
+    cadence: "per month",
+    description: "Complete, unrestricted access to all features with unlimited AI diagnostics.",
     features: [
-      "Everything in Monthly",
-      "AI Farm Advisor chat",
-      "Seasonal spray & planting planner",
-      "Priority marketplace deals",
-      "Saved diagnosis history",
+      "Everything in Start Plan",
+      "Unlimited AI Crop Scans",
+      "Unlimited AI Agronomist Chats",
+      "List up to 4 Products on Marketplace",
+      "Priority Agronomic Treatment Plans",
+      "Priority WhatsApp & Mobile Support",
+      "Includes 30-Day Free Trial",
     ],
-    cta: "Choose seasonal",
+    cta: "Get Full Access",
     featured: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    cadence: "let's talk",
-    description: "For co-ops, estates and agri-processors.",
-    features: [
-      "Multi-farm team accounts",
-      "Field-level analytics dashboards",
-      "Agronomist review of flagged scans",
-      "API & ERP integration",
-      "Dedicated onboarding",
-    ],
-    cta: "Contact sales",
-    featured: false,
   },
 ];
 
 function Index() {
   return (
     <div className="min-h-screen bg-background">
+      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3.5 lg:px-6">
           <Logo />
@@ -223,6 +230,13 @@ function Index() {
                 chemical treatment plans — built for South African farmers, in all 11 official
                 languages.
               </p>
+
+              {/* 30-Day Free Trial Callout */}
+              <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary">
+                <Clock className="h-3.5 w-3.5" />
+                <span>30-Day Free Trial on all subscription plans</span>
+              </div>
+
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button asChild size="lg">
                   <Link to="/auth">Diagnose a crop free</Link>
@@ -335,7 +349,7 @@ function Index() {
           </div>
         </section>
 
-        {/* Pricing */}
+        {/* Pricing: Free Tier, R100 (Limited), R200 (Full) */}
         <section id="pricing" className="py-20">
           <div className="mx-auto w-full max-w-7xl px-4 lg:px-6">
             <div className="max-w-2xl">
@@ -343,7 +357,7 @@ function Index() {
                 Simple pricing, priced for local farming
               </h2>
               <p className="mt-4 text-muted-foreground">
-                One saved harvest pays for the year. Cancel any time.
+                Start completely free or unlock full agronomic powers. Paid plans include a 30-day free trial.
               </p>
             </div>
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
@@ -352,24 +366,26 @@ function Index() {
                   key={plan.name}
                   className={
                     plan.featured
-                      ? "relative border-primary/60 bg-card shadow-card ring-1 ring-primary/30"
-                      : "border-border/70 bg-card shadow-card"
+                      ? "relative border-primary/60 bg-card shadow-card ring-1 ring-primary/30 flex flex-col justify-between"
+                      : "border-border/70 bg-card shadow-card flex flex-col justify-between"
                   }
                 >
                   <CardContent className="flex h-full flex-col pt-6">
                     {plan.featured ? (
                       <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
-                        Most popular
+                        Most popular • Full Access
                       </span>
                     ) : null}
-                    <h3 className="font-display text-lg font-bold">{plan.name}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-                    <p className="mt-6 flex items-baseline gap-2">
-                      <span className="font-display text-4xl font-extrabold tracking-tight">
-                        {plan.price}
-                      </span>
-                      <span className="text-sm text-muted-foreground">{plan.cadence}</span>
-                    </p>
+                    <div>
+                      <h3 className="font-display text-lg font-bold">{plan.name}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
+                      <p className="mt-6 flex items-baseline gap-2">
+                        <span className="font-display text-4xl font-extrabold tracking-tight">
+                          {plan.price}
+                        </span>
+                        <span className="text-sm text-muted-foreground">{plan.cadence}</span>
+                      </p>
+                    </div>
                     <ul className="mt-6 flex-1 space-y-3 text-sm">
                       {plan.features.map((item) => (
                         <li key={item} className="flex gap-2.5">
@@ -400,7 +416,7 @@ function Index() {
                 Your next scan could save your season.
               </h2>
               <p className="mt-3 text-sm/6 opacity-90">
-                Create a free account and diagnose your first crop photo in under a minute.
+                Create a free account and diagnose your first crop photo in under a minute with 30 days free.
               </p>
             </div>
             <Button asChild size="lg" variant="secondary">
@@ -410,6 +426,7 @@ function Index() {
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t border-border bg-card py-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <Logo />
