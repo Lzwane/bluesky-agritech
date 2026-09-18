@@ -3,23 +3,28 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Sun,
   Moon,
+  Laptop,
   User,
   Save,
   Phone,
   ShieldCheck,
   CreditCard,
   CheckCircle2,
+  XCircle,
   Sparkles,
   Zap,
   MapPin,
   Clock,
-  Building2,
   Tractor,
+  Languages,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n";
+import type { LanguageCode } from "@/lib/languages";
 
 declare global {
   interface Window {
@@ -31,58 +36,84 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
   component: SettingsPage,
 });
 
+type ThemeSetting = "dark" | "light" | "system";
+const OWNER_EMAIL = "mnisithokozani829@gmail.com";
+
+export const SA_LANGUAGES: { code: LanguageCode; name: string; nativeName: string }[] = [
+  { code: "en", name: "English", nativeName: "English" },
+  { code: "af", name: "Afrikaans", nativeName: "Afrikaans" },
+  { code: "nr", name: "isiNdebele", nativeName: "isiNdebele" },
+  { code: "xh", name: "isiXhosa", nativeName: "isiXhosa" },
+  { code: "zu", name: "isiZulu", nativeName: "isiZulu" },
+  { code: "nso", name: "Sepedi", nativeName: "Sepedi" },
+  { code: "st", name: "Sesotho", nativeName: "Sesotho" },
+  { code: "tn", name: "Setswana", nativeName: "Setswana" },
+  { code: "ss", name: "siSwati", nativeName: "siSwati" },
+  { code: "ve", name: "Tshivenda", nativeName: "Tshivenḓa" },
+  { code: "ts", name: "Xitsonga", nativeName: "Xitsonga" },
+];
+
+interface TierFeature {
+  title: string;
+  included: boolean;
+}
+
 interface SubscriptionTier {
-  id: "free_trial" | "smallholder_pro" | "commercial_estate";
+  id: "free_plan" | "grower_pro" | "commercial_unlimited";
   name: string;
   priceZAR: number;
   cadence: string;
   badge?: string;
   description: string;
-  features: string[];
+  features: TierFeature[];
 }
 
 const TIERS: SubscriptionTier[] = [
   {
-    id: "free_trial",
-    name: "Starter Trial",
+    id: "free_plan",
+    name: "Free Community",
     priceZAR: 0,
-    cadence: "30 Days Free",
-    description: "Standard access to evaluate foliar diagnostics and community exchange.",
+    cadence: "Free Forever",
+    description: "Essential access to review farm records, marketplace trade, and community discussions.",
     features: [
-      "10 AI foliar scans / month",
-      "Full Pathology & Pest Codex",
-      "Community Forum discussions",
-      "Standard organic & chemical recipes",
+      { title: "Standard diagnostic history archive", included: true },
+      { title: "Unlimited Marketplace trade access", included: true },
+      { title: "Farmer community forum discussions", included: true },
+      { title: "Live weather & field telemetry hub", included: true },
+      { title: "Foliar vision AI scanner allocations", included: false },
+      { title: "Priority agronomist consultations", included: false },
     ],
   },
   {
-    id: "smallholder_pro",
-    name: "Smallholder Pro",
-    priceZAR: 199,
+    id: "grower_pro",
+    name: "Grower Pro",
+    priceZAR: 100,
     cadence: "/ month",
     badge: "Most Popular",
-    description: "Ideal for growing commercial parcels requiring unlimited rapid diagnosis.",
+    description: "Designed for smallholders and emerging farmers needing frequent pest and disease diagnostics.",
     features: [
-      "Unlimited AI foliar diagnosis",
-      "Priority Agronomist Chatbot",
-      "Offline field treatment caching",
-      "Custom spray timing & PHI alerts",
-      "Export phytosanitary compliance logs",
+      { title: "25 instant AI foliar scans / month", included: true },
+      { title: "40 Agronomist AI voice chats / month", included: true },
+      { title: "Full pathology database library access", included: true },
+      { title: "Unlimited Marketplace buy & sell listings", included: true },
+      { title: "Active community forum participation", included: true },
+      { title: "Act 36 registered remedy recommendations", included: true },
     ],
   },
   {
-    id: "commercial_estate",
-    name: "Commercial Estate",
-    priceZAR: 599,
+    id: "commercial_unlimited",
+    name: "Commercial Unlimited",
+    priceZAR: 200,
     cadence: "/ month",
-    badge: "Enterprise",
-    description: "Engineered for agronomists, multi-pivot circles, and cooperative estates.",
+    badge: "Full Power",
+    description: "Uncapped, full-featured access engineered for commercial growers, estates, and cooperatives.",
     features: [
-      "Everything in Smallholder Pro",
-      "Multi-field telemetry & bulk logs",
-      "Direct agronomist priority line",
-      "Team collaboration (up to 5 scouts)",
-      "Satellite canopy stress overlays",
+      { title: "Unlimited AI foliar crop scans", included: true },
+      { title: "Unlimited Agronomist AI voice & text chats", included: true },
+      { title: "Unlimited Marketplace listings & supplier links", included: true },
+      { title: "Priority Act 36 spray & chemical regimens", included: true },
+      { title: "Dedicated WhatsApp & field tech support", included: true },
+      { title: "Multi-crop enterprise analytics", included: true },
     ],
   },
 ];
@@ -101,21 +132,29 @@ const SA_PROVINCES = [
 
 export function SettingsPage() {
   const { user } = useAuth();
+  const { language, setLanguage } = useLanguage();
   const rawMeta = (user as any)?.user_metadata;
+  const isOwner = user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase();
 
   const initialName =
     rawMeta?.full_name || rawMeta?.display_name || user?.email?.split("@")[0] || "";
   const initialFarmName = rawMeta?.farm_name || rawMeta?.business_name || "";
   const initialPhone = rawMeta?.phone_number || rawMeta?.phone || "";
-  const initialLang = rawMeta?.preferred_language || "en";
   const initialProvince = rawMeta?.primary_province || "Gauteng";
   const initialPlan = rawMeta?.subscription_tier || "free_trial";
 
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [themeMode, setThemeMode] = useState<ThemeSetting>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bluesky_theme_mode") as ThemeSetting;
+      if (saved === "dark" || saved === "light" || saved === "system") return saved;
+      return document.documentElement.classList.contains("dark") ? "dark" : "dark";
+    }
+    return "dark";
+  });
+
   const [displayName, setDisplayName] = useState(initialName);
   const [farmName, setFarmName] = useState(initialFarmName);
   const [phoneNumber, setPhoneNumber] = useState(initialPhone);
-  const [language, setLanguage] = useState(initialLang);
   const [primaryProvince, setPrimaryProvince] = useState(initialProvince);
   const [currentPlan, setCurrentPlan] = useState<string>(initialPlan);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -132,16 +171,54 @@ export function SettingsPage() {
       if (rawMeta.phone_number || rawMeta.phone) {
         setPhoneNumber(rawMeta.phone_number || rawMeta.phone);
       }
-      if (rawMeta.preferred_language) setLanguage(rawMeta.preferred_language);
+      if (rawMeta.preferred_language) {
+        setLanguage(rawMeta.preferred_language as LanguageCode);
+      }
       if (rawMeta.primary_province) setPrimaryProvince(rawMeta.primary_province);
       if (rawMeta.subscription_tier) setCurrentPlan(rawMeta.subscription_tier);
+      if (rawMeta.theme_preference) {
+        applyThemeSetting(rawMeta.theme_preference as ThemeSetting, false);
+      }
     }
   }, [rawMeta]);
 
+  const applyThemeSetting = (mode: ThemeSetting, saveToAuth: boolean = true) => {
+    setThemeMode(mode);
+    localStorage.setItem("bluesky_theme_mode", mode);
+
+    const root = document.documentElement;
+    let isDark = false;
+    if (mode === "system") {
+      isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } else {
+      isDark = mode === "dark";
+    }
+
+    if (isDark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+
+    if (saveToAuth && user) {
+      supabase.auth
+        .updateUser({
+          data: { theme_preference: mode },
+        })
+        .catch(() => {});
+    }
+  };
+
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
-  }, []);
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => {
+      if (themeMode === "system") {
+        applyThemeSetting("system", false);
+      }
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [themeMode]);
 
   useEffect(() => {
     if (!window.PaystackPop) {
@@ -152,7 +229,6 @@ export function SettingsPage() {
     }
   }, []);
 
-  // Trial progression: Day 1 on creation, Day 7 for existing users, up to Day 30
   const trialCalculation = useMemo(() => {
     const startedAtStr =
       rawMeta?.trial_started_at || user?.created_at || new Date().toISOString();
@@ -162,7 +238,6 @@ export function SettingsPage() {
     const elapsedMs = Math.max(0, now - startTimestamp);
     const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
 
-    // Day 1 starts on day 0 of elapsed time; max is 30
     const currentDay = Math.min(30, Math.max(1, elapsedDays + 1));
     const daysLeft = Math.max(0, 30 - currentDay);
     const progressPercent = Math.min(100, Math.round((currentDay / 30) * 100));
@@ -174,26 +249,16 @@ export function SettingsPage() {
       year: "numeric",
     });
 
+    const isTrialCompleted = currentDay >= 30;
+
     return {
       currentDay,
       daysLeft,
       progressPercent,
-      isExpired: currentDay >= 30,
+      isTrialCompleted,
       formattedExpiry,
     };
   }, [rawMeta?.trial_started_at, user?.created_at]);
-
-  const toggleTheme = (mode: "dark" | "light") => {
-    setTheme(mode);
-    if (mode === "dark") {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("bluesky_theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("bluesky_theme", "light");
-    }
-    toast.success(`Switched to ${mode === "dark" ? "Blackboard Dark" : "Daylight"} mode`);
-  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,6 +273,7 @@ export function SettingsPage() {
         phone_number: phoneNumber.trim(),
         preferred_language: language,
         primary_province: primaryProvince,
+        theme_preference: themeMode,
       };
 
       const { error: authError } = await supabase.auth.updateUser({
@@ -222,6 +288,7 @@ export function SettingsPage() {
             id: user.id,
             full_name: displayName.trim(),
             farm_name: farmName.trim(),
+            preferred_language: language,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "id" }
@@ -237,8 +304,12 @@ export function SettingsPage() {
   };
 
   const handleUpgradePlan = (tier: SubscriptionTier) => {
-    if (tier.id === "free_trial") {
-      toast.info("You are currently enjoying the 30-day trial tier.");
+    if (tier.id === "free_plan") {
+      toast.info(
+        trialCalculation.isTrialCompleted
+          ? "You are currently on the Free Community Tier."
+          : `Your complimentary evaluation has ${trialCalculation.daysLeft} days remaining.`
+      );
       return;
     }
 
@@ -246,7 +317,7 @@ export function SettingsPage() {
       import.meta.env["VITE_PAYSTACK_PUBLIC_KEY"] || "pk_test_placeholder_key";
 
     if (!user?.email) {
-      toast.error("User email not found. Please log in again.");
+      toast.error("User account email not detected. Please sign in again.");
       return;
     }
 
@@ -254,7 +325,7 @@ export function SettingsPage() {
 
     try {
       if (typeof window.PaystackPop === "undefined") {
-        throw new Error("Paystack SDK is loading. Please check your internet connection.");
+        throw new Error("Payment gateway is initializing. Please check your connection.");
       }
 
       const paystack = new window.PaystackPop();
@@ -272,24 +343,24 @@ export function SettingsPage() {
               value: displayName || user.email,
             },
             {
-              display_name: "Farm / Business Name",
+              display_name: "Farm Enterprise",
               variable_name: "farm_name",
-              value: farmName || "Not provided",
+              value: farmName || "Independent Producer",
             },
             {
-              display_name: "Phone Number",
-              variable_name: "phone_number",
-              value: phoneNumber || "Not provided",
+              display_name: "Selected Language",
+              variable_name: "language",
+              value: language,
             },
             {
-              display_name: "Selected Plan",
+              display_name: "Subscription Tier",
               variable_name: "plan_tier",
               value: tier.name,
             },
           ],
         },
         onSuccess: async (transaction: { reference: string }) => {
-          toast.success(`Payment verified! Welcome to ${tier.name}`);
+          toast.success(`Payment verified successfully! Welcome to ${tier.name}`);
           setCurrentPlan(tier.id);
 
           await supabase.auth.updateUser({
@@ -304,16 +375,16 @@ export function SettingsPage() {
         },
         onCancel: () => {
           setProcessingPayment(null);
-          toast.info("Payment cancelled.");
+          toast.info("Payment checkout cancelled.");
         },
         onError: (err: any) => {
           setProcessingPayment(null);
-          toast.error(err?.message || "Transaction failed. Please try again.");
+          toast.error(err?.message || "Payment transaction could not be processed.");
         },
       });
     } catch (err: any) {
       setProcessingPayment(null);
-      toast.error(err.message || "Could not launch Paystack checkout.");
+      toast.error(err.message || "Unable to launch checkout window.");
     }
   };
 
@@ -321,179 +392,33 @@ export function SettingsPage() {
     <div className="max-w-4xl mx-auto space-y-8 pb-20 font-sans">
       {/* Page Header */}
       <div>
-        <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5" /> Account Center
+        <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5" /> Farmer Account &amp; Preferences
         </span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-          Settings &amp; Subscription
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
+          Profile &amp; Subscription Settings
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1 leading-relaxed">
-          Manage your farm identity, contact credentials, visual appearance, and active subscription plan.
+        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+          Manage your farm details, primary language, visual theme, and active subscription plan.
         </p>
       </div>
 
-      {/* 30-Day Free Trial Tracker */}
-      <div className="rounded-3xl border border-emerald-500/40 bg-gradient-to-br from-[#131d27] via-[#111922] to-[#0d131a] p-6 sm:p-7 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                <Clock className="h-3.5 w-3.5" />
-                {currentPlan === "free_trial"
-                  ? `Day ${trialCalculation.currentDay} of 30`
-                  : "Active Paid Plan"}
-              </span>
-              <span className="text-xs text-slate-400">
-                {currentPlan === "free_trial"
-                  ? `${trialCalculation.daysLeft} days remaining • Ends ${trialCalculation.formattedExpiry}`
-                  : `Renews on ${trialCalculation.formattedExpiry}`}
-              </span>
-            </div>
-
-            <h2 className="text-lg sm:text-xl font-bold text-white mt-2">
-              {currentPlan === "free_trial"
-                ? `Free Tier Active: Day ${trialCalculation.currentDay}/30`
-                : `Active Tier: ${TIERS.find((t) => t.id === currentPlan)?.name || "Pro Member"}`}
-            </h2>
-            <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-              {currentPlan === "free_trial"
-                ? "Full diagnostic suites and community exchange active. Upgrade anytime to unlock unlimited field vision analysis and automated telemetry."
-                : "Your parcel is covered with high-throughput foliar vision scans and priority agronomist consultation."}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-left sm:text-right">
-            <span className="text-sm font-mono font-bold text-emerald-400">
-              {trialCalculation.currentDay} / 30 Days
-            </span>
-            <div className="w-40 sm:w-48 h-2.5 bg-slate-800 rounded-full mt-1.5 overflow-hidden border border-slate-700/60">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
-                style={{ width: `${trialCalculation.progressPercent}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Subscription Plans Section */}
-      <div className="space-y-4">
+      {/* 1. Account & Farm Information Form */}
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 shadow-sm dark:shadow-xl space-y-6 transition-colors">
         <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-emerald-400" /> Subscription Tiers
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+            <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Grower &amp; Farm Identity
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Secure checkout in South African Rand (ZAR) via card, Instant EFT, or SnapScan using Paystack.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TIERS.map((tier) => {
-            const isCurrent = currentPlan === tier.id;
-            const isProcessing = processingPayment === tier.id;
-
-            return (
-              <div
-                key={tier.id}
-                className={cn(
-                  "rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all relative",
-                  isCurrent
-                    ? "border-emerald-500/80 bg-[#16212d] shadow-xl shadow-emerald-950/40"
-                    : "border-slate-800 bg-[#131922] hover:border-slate-700"
-                )}
-              >
-                {tier.badge && (
-                  <span className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md">
-                    {tier.badge}
-                  </span>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-white">{tier.name}</h3>
-                    {isCurrent && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 className="h-3 w-3" /> Active
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-2xl font-extrabold text-white">
-                      R{tier.priceZAR}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">
-                      {tier.cadence}
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                    {tier.description}
-                  </p>
-
-                  <div className="my-4 border-t border-slate-800/80" />
-
-                  <ul className="space-y-2 text-xs text-slate-300">
-                    {tier.features.map((feat, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-[11px] leading-snug">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-6 pt-2">
-                  <button
-                    type="button"
-                    disabled={isCurrent || Boolean(processingPayment)}
-                    onClick={() => handleUpgradePlan(tier)}
-                    className={cn(
-                      "w-full py-2.5 px-4 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
-                      isCurrent
-                        ? "bg-slate-800 text-slate-400 cursor-default"
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-950/50"
-                    )}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span>Opening Paystack...</span>
-                      </>
-                    ) : isCurrent ? (
-                      "Current Plan"
-                    ) : (
-                      <>
-                        <Zap className="h-3.5 w-3.5" /> Upgrade via Paystack
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Account Info Form */}
-      <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl shadow-xl space-y-6">
-        <div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-400" /> Farmer Account &amp; Farm Identity
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Configure your registered farm enterprise name, grower alias, and regional settings.
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+            Update your contact credentials, farm location, and preferred agricultural language.
           </p>
         </div>
 
         <form onSubmit={handleSaveProfile} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Grower Alias */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Full Name / Grower Alias
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
+                Full Name
               </label>
               <input
                 type="text"
@@ -501,49 +426,46 @@ export function SettingsPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Sipho Khumalo"
                 required
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-inner"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none transition shadow-inner"
               />
             </div>
 
-            {/* Farm / Business Name */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
-                <Tractor className="h-3.5 w-3.5 text-emerald-400" /> Farm or Business Name
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1.5">
+                <Tractor className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Farm or Business Name
               </label>
               <input
                 type="text"
                 value={farmName}
                 onChange={(e) => setFarmName(e.target.value)}
-                placeholder="e.g. BlueSky AgriTech Farms / Khumalo Family Estate"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-inner"
+                placeholder="e.g. Highveld Agri Cooperative"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none transition shadow-inner"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Phone Number */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1">
-                <Phone className="h-3 w-3 text-emerald-400" /> Phone Number (SMS / Outbreak Alerts)
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1">
+                <Phone className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Phone Number
               </label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="e.g. +27 82 123 4567"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-inner"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none transition shadow-inner"
               />
             </div>
 
-            {/* Operating Province */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-emerald-400" /> Operating Province
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Production Province
               </label>
               <select
                 value={primaryProvince}
                 onChange={(e) => setPrimaryProvince(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
               >
                 {SA_PROVINCES.map((prov) => (
                   <option key={prov} value={prov}>
@@ -555,41 +477,39 @@ export function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Locked Email */}
             <div>
-              <label className="text-xs font-semibold text-slate-400 block mb-1.5 flex items-center justify-between">
-                <span>Email Address</span>
-                <span className="text-[10px] text-slate-500 font-normal">Primary Login (Locked)</span>
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center justify-between">
+                <span>Account Email</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Primary Login (Locked)</span>
               </label>
               <div className="relative">
                 <input
                   type="email"
                   disabled
                   value={user?.email || ""}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950/60 px-3.5 py-2.5 text-xs text-slate-400 cursor-not-allowed"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/60 px-3.5 py-2.5 text-xs text-slate-500 dark:text-slate-400 cursor-not-allowed"
                 />
-                <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
               </div>
             </div>
 
-            {/* Language Selection */}
             <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                Primary Agronomic &amp; Interface Language
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1.5">
+                <Languages className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Official Agricultural Language
               </label>
               <select
                 value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-xs text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
+                onChange={(e) => {
+                  const val = e.target.value as LanguageCode;
+                  setLanguage(val);
+                }}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
               >
-                <option value="en">English (Official Ag Standard)</option>
-                <option value="zu">isiZulu</option>
-                <option value="xh">isiXhosa</option>
-                <option value="af">Afrikaans</option>
-                <option value="nso">Sepedi (Northern Sotho)</option>
-                <option value="st">Sesotho</option>
-                <option value="ts">Xitsonga</option>
-                <option value="tn">Setswana</option>
+                {SA_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.nativeName} ({lang.name})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -598,61 +518,270 @@ export function SettingsPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 px-5 text-xs font-bold text-white transition active:scale-95 disabled:opacity-50 shadow-md shadow-emerald-950/40"
+              className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 px-5 text-xs font-bold text-white transition active:scale-95 disabled:opacity-50 shadow-md"
             >
               <Save className="h-3.5 w-3.5" />
-              <span>{savingProfile ? "Saving Profile..." : "Save Changes"}</span>
+              <span>{savingProfile ? "Saving Details..." : "Save Profile Details"}</span>
             </button>
           </div>
         </form>
       </div>
 
-      {/* Interface Theme Toggle */}
-      <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl shadow-xl">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
-          {theme === "dark" ? (
-            <Moon className="h-4 w-4 text-emerald-400" />
+      {/* 2. Theme & Display Customization */}
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 shadow-sm dark:shadow-xl transition-colors">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1 flex items-center gap-2">
+          {themeMode === "dark" ? (
+            <Moon className="h-4 w-4 text-emerald-500" />
+          ) : themeMode === "light" ? (
+            <Sun className="h-4 w-4 text-amber-500" />
           ) : (
-            <Sun className="h-4 w-4 text-amber-400" />
+            <Laptop className="h-4 w-4 text-teal-500" />
           )}
-          Interface Theme
+          Display Theme &amp; Atmosphere
         </h2>
-        <p className="text-xs text-slate-400 mb-4">
-          Select between Blackboard Dark Mode (recommended for field screens) or Daylight Mode.
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
+          Choose between high-contrast field daylight mode or comfortable low-glare dark mode.
         </p>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Blackboard Dark */}
           <button
             type="button"
-            onClick={() => toggleTheme("dark")}
+            onClick={() => applyThemeSetting("dark")}
             className={cn(
-              "flex flex-col items-center justify-center p-4 rounded-2xl border transition cursor-pointer",
-              theme === "dark"
-                ? "border-emerald-500 bg-slate-900/90 text-white shadow-lg shadow-emerald-950/40"
-                : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700"
+              "flex flex-col items-center justify-center p-4 rounded-2xl border transition cursor-pointer text-center",
+              themeMode === "dark"
+                ? "border-emerald-500 bg-slate-900 text-white shadow-md ring-1 ring-emerald-500"
+                : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
             )}
           >
             <Moon className="h-6 w-6 text-emerald-400 mb-2" />
-            <span className="text-xs font-bold">Blackboard Dark</span>
-            <span className="text-[10px] text-slate-400 mt-0.5">High contrast, low battery drain</span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">Blackboard Dark</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Low-light night mode with reduced eye strain
+            </span>
           </button>
 
+          {/* Daylight Light Mode */}
           <button
             type="button"
-            onClick={() => toggleTheme("light")}
+            onClick={() => applyThemeSetting("light")}
             className={cn(
-              "flex flex-col items-center justify-center p-4 rounded-2xl border transition cursor-pointer",
-              theme === "light"
-                ? "border-emerald-500 bg-slate-800/90 text-white shadow-lg"
-                : "border-slate-800 bg-slate-900/40 text-slate-400 hover:border-slate-700"
+              "flex flex-col items-center justify-center p-4 rounded-2xl border transition cursor-pointer text-center",
+              themeMode === "light"
+                ? "border-amber-500 bg-amber-50/50 text-slate-900 shadow-md ring-1 ring-amber-500"
+                : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
             )}
           >
-            <Sun className="h-6 w-6 text-amber-400 mb-2" />
-            <span className="text-xs font-bold">Daylight Mode</span>
-            <span className="text-[10px] text-slate-400 mt-0.5">Direct outdoor sunlight mode</span>
+            <Sun className="h-6 w-6 text-amber-500 mb-2" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white">Daylight Light</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Crisp daylight contrast optimized for bright sunlight
+            </span>
+          </button>
+
+          {/* System Default */}
+          <button
+            type="button"
+            onClick={() => applyThemeSetting("system")}
+            className={cn(
+              "flex flex-col items-center justify-center p-4 rounded-2xl border transition cursor-pointer text-center",
+              themeMode === "system"
+                ? "border-teal-500 bg-teal-50/50 dark:bg-teal-950/40 text-slate-900 dark:text-white shadow-md ring-1 ring-teal-500"
+                : "border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+            )}
+          >
+            <Laptop className="h-6 w-6 text-teal-500 mb-2" />
+            <span className="text-xs font-bold text-slate-900 dark:text-white">System Preference</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Synchronize dynamically with your device settings
+            </span>
           </button>
         </div>
       </div>
+
+      {/* 3. Trial Progress & Subscription Hub (Hidden for System Overseer) */}
+      {!isOwner && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Plan &amp; Subscription Billing
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Transparent pricing in South African Rand (ZAR) processed securely via Paystack.
+            </p>
+          </div>
+
+          {/* 30-Day Free Trial Tracker */}
+          <div className="rounded-3xl border border-emerald-500/40 bg-white dark:bg-gradient-to-br dark:from-[#131d27] dark:via-[#111922] dark:to-[#0d131a] p-6 sm:p-7 shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
+            <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                    <Clock className="h-3.5 w-3.5" />
+                    {currentPlan === "free_trial" || currentPlan === "free_plan"
+                      ? trialCalculation.isTrialCompleted
+                        ? "30-Day Trial Concluded"
+                        : `Evaluation: Day ${trialCalculation.currentDay} of 30`
+                      : "Active Subscription"}
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    {trialCalculation.isTrialCompleted
+                      ? "Free Community Access Active"
+                      : `${trialCalculation.daysLeft} days remaining • Ends ${trialCalculation.formattedExpiry}`}
+                  </span>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-2">
+                  {currentPlan === "grower_pro"
+                    ? "Active Tier: Grower Pro (R100/mo)"
+                    : currentPlan === "commercial_unlimited"
+                    ? "Active Tier: Commercial Unlimited (R200/mo)"
+                    : trialCalculation.isTrialCompleted
+                    ? "Free Community Tier"
+                    : `30-Day Evaluation: Day ${trialCalculation.currentDay} of 30`}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  {trialCalculation.isTrialCompleted && currentPlan === "free_plan"
+                    ? "Your 30-day evaluation has concluded. You still enjoy full access to community forum discussions, marketplace products, and dashboard telemetry."
+                    : "Enjoy comprehensive access to foliar diagnostic models, plant pathology research, marketplace trade, and community tools throughout your active period."}
+                </p>
+              </div>
+
+              <div className="shrink-0 text-left sm:text-right">
+                <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {trialCalculation.currentDay} / 30 Days
+                </span>
+                <div className="w-40 sm:w-48 h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden border border-slate-300 dark:border-slate-700/60">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
+                    style={{ width: `${trialCalculation.progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier Cards (R0, R100, R200) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {TIERS.map((tier) => {
+              const isCurrent =
+                currentPlan === tier.id ||
+                (tier.id === "free_plan" &&
+                  (currentPlan === "free_trial" || !currentPlan));
+              const isProcessing = processingPayment === tier.id;
+
+              return (
+                <div
+                  key={tier.id}
+                  className={cn(
+                    "rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all relative",
+                    isCurrent
+                      ? "border-emerald-500 bg-white dark:bg-[#16212d] shadow-md dark:shadow-emerald-950/40 ring-1 ring-emerald-500"
+                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-[#131922] hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
+                  )}
+                >
+                  {tier.badge && (
+                    <span className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md">
+                      {tier.badge}
+                    </span>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">{tier.name}</h3>
+                      {isCurrent && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="h-3 w-3" /> Active Plan
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                        R{tier.priceZAR}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        {tier.cadence}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                      {tier.description}
+                    </p>
+
+                    <div className="my-4 border-t border-slate-100 dark:border-slate-800/80" />
+
+                    <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                      {tier.features.map((feat, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          {feat.included ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                          )}
+                          <span
+                            className={cn(
+                              "text-[11px] leading-snug",
+                              !feat.included && "text-slate-400 dark:text-slate-500 line-through"
+                            )}
+                          >
+                            {feat.title}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-2">
+                    <button
+                      type="button"
+                      disabled={isCurrent || Boolean(processingPayment)}
+                      onClick={() => handleUpgradePlan(tier)}
+                      className={cn(
+                        "w-full py-2.5 px-4 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
+                        isCurrent
+                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 cursor-default"
+                          : "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-md"
+                      )}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span>Opening Paystack...</span>
+                        </>
+                      ) : isCurrent ? (
+                        "Current Plan"
+                      ) : (
+                        <>
+                          <Zap className="h-3.5 w-3.5" /> Upgrade to {tier.name}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* System Overseer Privilege Card */}
+      {isOwner && (
+        <div className="rounded-3xl border border-emerald-500/40 bg-emerald-950/20 dark:bg-emerald-950/30 p-6 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <ShieldAlert className="h-3 w-3" /> System Overseer Access
+            </span>
+            <h3 className="text-base font-bold text-white mt-1">Infrastructure Authority Active</h3>
+            <p className="text-xs text-slate-400 max-w-xl">
+              Commercial Tier Equivalency (R200/mo) is locked via database definer policies. Consumer metering and trial restrictions are globally bypassed.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

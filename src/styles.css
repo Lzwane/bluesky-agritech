@@ -7,7 +7,6 @@
 /*
  * BlueSky AgriTech design system.
  * Fresh field greens + sky blue, earthy neutral surfaces.
- * All colors are oklch semantic tokens. Never hardcode colors in components.
  */
 
 @theme inline {
@@ -65,76 +64,63 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-card: 0 1px 2px oklch(0.25 0.05 150 / 6%), 0 12px 32px -18px oklch(0.3 0.06 150 / 22%);
-  --shadow-lift: 0 2px 6px oklch(0.25 0.05 150 / 8%), 0 24px 48px -24px oklch(0.3 0.06 150 / 30%);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 10px 20px -5px rgba(0, 0, 0, 0.04);
+  --shadow-lift: 0 4px 6px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.08);
 }
 
+/* Light Mode Variables: Soft Grey Page Canvas (#f1f5f9) + Crisp White Cards (#ffffff) */
 :root {
   --radius: 0.9rem;
 
-  --background: oklch(0.985 0.008 110);
-  --foreground: oklch(0.24 0.03 150);
+  --background: #f1f5f9;
+  --foreground: #0f172a;
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.24 0.03 150);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.24 0.03 150);
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
 
   --primary: oklch(0.53 0.15 148);
-  --primary-foreground: oklch(0.99 0.01 120);
-  --primary-soft: oklch(0.94 0.05 145);
+  --primary-foreground: #ffffff;
+  --primary-soft: #d1fae5;
 
-  --secondary: oklch(0.95 0.02 110);
-  --secondary-foreground: oklch(0.3 0.04 150);
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
 
-  --muted: oklch(0.955 0.012 110);
-  --muted-foreground: oklch(0.5 0.02 145);
+  --muted: #e2e8f0;
+  --muted-foreground: #64748b;
 
-  --accent: oklch(0.93 0.06 140);
-  --accent-foreground: oklch(0.3 0.06 150);
+  --accent: #e6f7ef;
+  --accent-foreground: #0f172a;
 
   --sky: oklch(0.58 0.15 250);
-  --sky-foreground: oklch(0.99 0.01 250);
+  --sky-foreground: #ffffff;
 
-  --earth: oklch(0.72 0.06 70);
-  --earth-foreground: oklch(0.25 0.04 70);
+  --earth: #92400e;
+  --earth-foreground: #ffffff;
 
-  --destructive: oklch(0.56 0.2 27);
-  --destructive-foreground: oklch(0.99 0.01 120);
-  --warning: oklch(0.75 0.15 75);
-  --warning-foreground: oklch(0.26 0.05 75);
-  --success: oklch(0.6 0.14 150);
-  --success-foreground: oklch(0.99 0.01 120);
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+  --success: #10b981;
+  --success-foreground: #ffffff;
 
-  --border: oklch(0.9 0.015 130);
-  --input: oklch(0.9 0.015 130);
+  --border: #e2e8f0;
+  --input: #cbd5e1;
   --ring: oklch(0.53 0.15 148);
 
-  --chart-1: oklch(0.53 0.15 148);
-  --chart-2: oklch(0.58 0.15 250);
-  --chart-3: oklch(0.72 0.13 85);
-  --chart-4: oklch(0.65 0.12 175);
-  --chart-5: oklch(0.6 0.13 40);
-
-  --sidebar: oklch(0.98 0.01 130);
-  --sidebar-foreground: oklch(0.24 0.03 150);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
   --sidebar-primary: oklch(0.53 0.15 148);
-  --sidebar-primary-foreground: oklch(0.99 0.01 120);
-  --sidebar-accent: oklch(0.94 0.04 140);
-  --sidebar-accent-foreground: oklch(0.28 0.05 150);
-  --sidebar-border: oklch(0.9 0.015 130);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f1f5f9;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
   --sidebar-ring: oklch(0.53 0.15 148);
-
-  --gradient-hero: linear-gradient(
-    135deg,
-    oklch(0.45 0.13 152) 0%,
-    oklch(0.42 0.12 200) 55%,
-    oklch(0.5 0.14 250) 100%
-  );
-  --gradient-leaf: linear-gradient(140deg, oklch(0.62 0.16 145), oklch(0.53 0.15 148));
-  --gradient-sky: linear-gradient(160deg, oklch(0.7 0.11 245), oklch(0.55 0.16 252));
 }
 
+/* Blackboard Dark Mode (Preserved exactly as your custom theme) */
 .dark {
   --background: oklch(0.19 0.025 155);
   --foreground: oklch(0.96 0.01 120);
@@ -179,17 +165,16 @@
     border-color: var(--color-border);
   }
 
-  body {
+  html, body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  h1,
-  h2,
-  h3,
-  h4 {
+  h1, h2, h3, h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
@@ -219,4 +204,76 @@
 
 @utility shadow-lift {
   box-shadow: var(--shadow-lift);
+}
+
+/* =========================================================================
+   UNIVERSAL THEME OVERRIDES FOR CARDS, CONTAINERS & TEXT
+   Ensures ALL pages automatically have white cards and dark text in Light Mode
+   while keeping the exact dark blackboard colors in Dark Mode.
+   ========================================================================= */
+
+/* Light Mode: Convert dark card backgrounds across all pages to crisp white */
+html:not(.dark) [class*="bg-[#161d26]"],
+html:not(.dark) [class*="bg-[#131922]"],
+html:not(.dark) [class*="bg-[#11161d]"],
+html:not(.dark) [class*="bg-[#1a232f]"],
+html:not(.dark) [class*="bg-[#1e293b]"],
+html:not(.dark) [class*="bg-slate-900"],
+html:not(.dark) [class*="bg-slate-950"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Light Mode: White text inside cards becomes readable dark slate */
+html:not(.dark) [class*="bg-[#161d26]"] .text-white,
+html:not(.dark) [class*="bg-[#131922]"] .text-white,
+html:not(.dark) [class*="bg-[#11161d]"] .text-white,
+html:not(.dark) [class*="bg-[#1e293b]"] .text-white,
+html:not(.dark) [class*="bg-slate-900"] .text-white,
+html:not(.dark) [class*="bg-white"] .text-white,
+html:not(.dark) h1.text-white,
+html:not(.dark) h2.text-white,
+html:not(.dark) h3.text-white {
+  color: #0f172a !important;
+}
+
+/* Light Mode: Slate-400 / Slate-300 helper text becomes readable medium slate */
+html:not(.dark) [class*="bg-[#161d26]"] .text-slate-400,
+html:not(.dark) [class*="bg-[#131922]"] .text-slate-400,
+html:not(.dark) [class*="bg-[#11161d]"] .text-slate-400,
+html:not(.dark) [class*="bg-slate-900"] .text-slate-400,
+html:not(.dark) [class*="bg-white"] .text-slate-400,
+html:not(.dark) p.text-slate-400 {
+  color: #64748b !important;
+}
+
+html:not(.dark) [class*="bg-[#161d26]"] .text-slate-300,
+html:not(.dark) [class*="bg-[#131922]"] .text-slate-300,
+html:not(.dark) [class*="bg-white"] .text-slate-300 {
+  color: #475569 !important;
+}
+
+/* Light Mode: Card borders become soft neutral slate */
+html:not(.dark) [class*="border-slate-800"],
+html:not(.dark) [class*="border-slate-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Light Mode Inputs: Soft grey field input with clear dark text */
+html:not(.dark) input[class*="bg-slate-900"],
+html:not(.dark) select[class*="bg-slate-900"],
+html:not(.dark) textarea[class*="bg-[#161d26]"] {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Keep button gradients and badges bright white text in both themes */
+html:not(.dark) button[class*="from-emerald-600"] *,
+html:not(.dark) button[class*="from-emerald-600"],
+html:not(.dark) .bg-gradient-to-r.text-white,
+html:not(.dark) [class*="bg-emerald-600"] .text-white,
+html:not(.dark) span[class*="from-emerald-500"] {
+  color: #ffffff !important;
 }

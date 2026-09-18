@@ -112,13 +112,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+/* Immediate Theme Evaluator: runs before React boots to eliminate flashes and remember user choice */
+const themeInitScript = `
+  (function() {
+    try {
+      var saved = localStorage.getItem('bluesky_theme_mode');
+      var isDark = false;
+      if (saved === 'light') {
+        isDark = false;
+      } else if (saved === 'dark') {
+        isDark = true;
+      } else if (saved === 'system') {
+        isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } else {
+        isDark = true;
+      }
+
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch (e) {
+      document.documentElement.classList.add('dark');
+    }
+  })();
+`;
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
-      <body>
+      <body className="min-h-screen bg-[#f1f5f9] text-slate-900 dark:bg-[#0d1217] dark:text-slate-100 transition-colors duration-150">
         {children}
         <Scripts />
       </body>
@@ -132,7 +160,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
         <Toaster position="top-center" richColors />
       </LanguageProvider>

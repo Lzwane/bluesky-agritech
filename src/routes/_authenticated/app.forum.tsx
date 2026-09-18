@@ -132,7 +132,7 @@ export function ForumPage() {
     refetchOnWindowFocus: true,
   });
 
-  // 3. Fetch Comments: safely map author name from profiles if author_name column is missing
+  // 3. Fetch Comments
   const commentsQuery = useQuery({
     queryKey: ["forum-comments"],
     queryFn: async () => {
@@ -147,7 +147,6 @@ export function ForumPage() {
         .order("created_at", { ascending: true });
 
       if (error) {
-        // Fallback simple query if relation doesn't exist
         const simple = await (supabase as any)
           .from("forum_comments")
           .select("*")
@@ -363,7 +362,7 @@ export function ForumPage() {
     },
   });
 
-  // Add Comment Mutation: Dynamically tries payload with author_name, falling back without it
+  // Add Comment Mutation
   const addCommentMutation = useMutation({
     mutationFn: async (postId: string) => {
       const { data: authData } = await supabase.auth.getUser();
@@ -376,7 +375,6 @@ export function ForumPage() {
 
       const commentTimestamp = new Date().toISOString();
 
-      // Ensure profile exists for joined author names
       await (supabase as any).from("profiles").upsert(
         {
           id: activeUser.id,
@@ -386,7 +384,6 @@ export function ForumPage() {
         { onConflict: "id" }
       );
 
-      // Attempt 1: Full payload including author_name
       let { data, error } = await (supabase as any)
         .from("forum_comments")
         .insert({
@@ -400,7 +397,6 @@ export function ForumPage() {
         .select()
         .single();
 
-      // Attempt 2: If author_name isn't in schema, strip it and rely on user_id -> profiles join
       if (error && error.message?.includes("author_name")) {
         const fallback = await (supabase as any)
           .from("forum_comments")
@@ -438,17 +434,17 @@ export function ForumPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 font-sans">
       {/* Community Header Banner */}
-      <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-sm dark:shadow-2xl transition-colors">
         <div className="absolute top-0 right-0 h-64 w-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-300">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               <Sparkles className="h-3.5 w-3.5" /> South African Farmer Network
             </span>
-            <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Community Field Exchange
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               Connect with fellow growers in real time. Share field observations, like posts, comment, and collaborate across all 9 provinces.
             </p>
           </div>
@@ -456,7 +452,7 @@ export function ForumPage() {
           <button
             type="button"
             onClick={() => setComposerOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-emerald-950/60 hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 shrink-0 cursor-pointer"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 shrink-0 cursor-pointer"
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>Create New Post</span>
@@ -473,14 +469,14 @@ export function ForumPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search discussions, symptoms, grower names, or regional alerts..."
-            className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-800 bg-[#111720]/90 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-inner"
+            className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-[#111720]/90 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-xs"
           />
         </div>
 
         {/* Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 shrink-0 mr-1">
-            <Filter className="h-3.5 w-3.5 text-emerald-400" /> Category:
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0 mr-1">
+            <Filter className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Category:
           </span>
           {CATEGORIES.map((cat) => (
             <button
@@ -489,8 +485,8 @@ export function ForumPage() {
               className={cn(
                 "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer",
                 selectedCategory === cat
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
-                  : "bg-[#111720] border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20 dark:shadow-emerald-950/50"
+                  : "bg-white dark:bg-[#111720] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
               )}
             >
               {cat}
@@ -502,9 +498,9 @@ export function ForumPage() {
       {/* Social Posts Stream */}
       <div className="space-y-4">
         {filteredPosts.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-slate-800 bg-[#131922]/50 p-12 text-center space-y-3">
-            <MessageSquare className="h-8 w-8 text-slate-600 mx-auto" />
-            <h3 className="font-bold text-sm text-slate-200">No community posts match your search</h3>
+          <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#131922]/50 p-12 text-center space-y-3 shadow-xs transition-colors">
+            <MessageSquare className="h-8 w-8 text-slate-400 dark:text-slate-600 mx-auto" />
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">No community posts match your search</h3>
             <p className="text-xs text-slate-500">
               Try adjusting your search terms or switch categories to "All" to browse all discussions.
             </p>
@@ -532,32 +528,32 @@ export function ForumPage() {
             return (
               <div
                 key={post.id}
-                className="rounded-3xl border border-slate-800/90 bg-[#131922] p-6 shadow-xl space-y-4 transition hover:border-slate-700/80"
+                className="rounded-3xl border border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#131922] p-6 shadow-sm dark:shadow-xl space-y-4 transition hover:border-slate-300 dark:hover:border-slate-700/80"
               >
                 {/* Author Metadata Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-400 text-xs shrink-0 shadow-inner">
+                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-700 dark:text-emerald-400 text-xs shrink-0 shadow-inner">
                       {post.author_name?.slice(0, 2).toUpperCase() || "SA"}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-white">
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">
                           {post.author_name}
                         </span>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#1a2332] text-emerald-400 border border-emerald-500/20">
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-[#1a2332] text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
                           {post.category}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {post.location && (
                           <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-emerald-400" /> {post.location}
+                            <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> {post.location}
                           </span>
                         )}
                         <span>•</span>
                         <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-slate-500" />
+                          <Clock className="h-3 w-3 text-slate-400 dark:text-slate-500" />
                           {new Date(post.created_at).toLocaleDateString("en-ZA", {
                             day: "numeric",
                             month: "short",
@@ -573,16 +569,16 @@ export function ForumPage() {
 
                 {/* Title & Body */}
                 <div className="space-y-2">
-                  <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
                     {post.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                     {post.body || post.content}
                   </p>
                 </div>
 
                 {/* Social Buttons */}
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs text-slate-400">
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80 text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
@@ -590,8 +586,8 @@ export function ForumPage() {
                       className={cn(
                         "flex items-center gap-1.5 font-bold transition active:scale-90 px-3 py-1.5 rounded-xl border cursor-pointer",
                         isLikedByMe
-                          ? "bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-xs"
-                          : "bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                          ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40 shadow-xs"
+                          : "bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700"
                       )}
                     >
                       <Heart
@@ -606,9 +602,9 @@ export function ForumPage() {
                     <button
                       type="button"
                       onClick={() => setOpenPostId(isExpanded ? null : postIdStr)}
-                      className="flex items-center gap-1.5 font-semibold text-slate-400 hover:text-white transition active:scale-95 px-3 py-1.5 rounded-xl bg-slate-900/40 border border-slate-800 hover:border-slate-700 cursor-pointer"
+                      className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition active:scale-95 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer"
                     >
-                      <MessageCircle className="h-4 w-4 text-emerald-400" />
+                      <MessageCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       <span>
                         {postComments.length} {postComments.length === 1 ? "Comment" : "Comments"}
                       </span>
@@ -621,7 +617,7 @@ export function ForumPage() {
                       navigator.clipboard.writeText(window.location.href);
                       toast.success("Post link copied to clipboard");
                     }}
-                    className="flex items-center gap-1.5 text-slate-400 hover:text-white transition cursor-pointer"
+                    className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
                   >
                     <Share2 className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Share</span>
@@ -630,16 +626,16 @@ export function ForumPage() {
 
                 {/* Social Commenting Thread */}
                 {isExpanded && (
-                  <div className="pt-4 space-y-3.5 border-t border-slate-800/60 animate-in fade-in duration-200">
+                  <div className="pt-4 space-y-3.5 border-t border-slate-100 dark:border-slate-800/60 animate-in fade-in duration-200">
                     {postComments.length > 0 ? (
                       <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                         {postComments.map((comment) => (
                           <div
                             key={comment.id}
-                            className="p-3.5 rounded-2xl bg-[#0f151d] border border-slate-800/80 text-xs space-y-1"
+                            className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0f151d] border border-slate-200 dark:border-slate-800/80 text-xs space-y-1 shadow-2xs"
                           >
-                            <div className="flex items-center justify-between text-slate-400 text-[11px]">
-                              <span className="font-bold text-slate-200">
+                            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px]">
+                              <span className="font-bold text-slate-900 dark:text-slate-200">
                                 {comment.author_name}
                               </span>
                               <span>
@@ -649,7 +645,7 @@ export function ForumPage() {
                                 })}
                               </span>
                             </div>
-                            <p className="text-slate-300 leading-relaxed whitespace-pre-line">
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
                               {comment.body || comment.content}
                             </p>
                           </div>
@@ -676,7 +672,7 @@ export function ForumPage() {
                           }
                         }}
                         placeholder="Write a comment or practical tip…"
-                        className="flex-1 h-10 px-4 rounded-xl border border-slate-800 bg-[#0f151d] text-xs text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition"
+                        className="flex-1 h-10 px-4 rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0f151d] text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition shadow-2xs"
                       />
                       <button
                         type="button"
@@ -698,21 +694,21 @@ export function ForumPage() {
 
       {/* Modal Dialog: Create New Post */}
       {composerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-xl rounded-3xl border border-slate-700 bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-100 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-900 dark:text-slate-100 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5" /> New Discussion
                 </span>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white mt-0.5">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mt-0.5">
                   Share with Farmers
                 </h2>
               </div>
               <button
                 type="button"
                 onClick={() => setComposerOpen(false)}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer"
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -727,11 +723,11 @@ export function ForumPage() {
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Crop Category</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Crop Category</label>
                   <select
                     value={postCategory}
                     onChange={(e) => setPostCategory(e.target.value)}
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white focus:border-emerald-500 focus:outline-none transition font-medium"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition font-medium"
                   >
                     {CATEGORIES.filter((c) => c !== "All").map((cat) => (
                       <option key={cat} value={cat}>
@@ -742,55 +738,55 @@ export function ForumPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Your Location / Region</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Your Location / Region</label>
                   <input
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="e.g. Brits, North West"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Title / Main Question</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Title / Main Question</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Leaf discoloration after heavy morning fog on tomatoes"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition font-medium"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition font-medium"
                   maxLength={140}
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Field Details & Context</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Field Details & Context</label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={4}
                   placeholder="Describe observed plant symptoms, chemical applications used, soil moisture, or what you've tried..."
-                  className="w-full p-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition resize-none leading-relaxed"
+                  className="w-full p-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-emerald-500 focus:outline-none transition resize-none leading-relaxed"
                   maxLength={3000}
                   required
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setComposerOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createPostMutation.isPending}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-lg shadow-emerald-950/40 hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-md hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span>{createPostMutation.isPending ? "Publishing…" : "Publish to Feed"}</span>
@@ -803,3 +799,5 @@ export function ForumPage() {
     </div>
   );
 }
+
+export default ForumPage;
