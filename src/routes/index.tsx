@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   Bug,
   Camera,
@@ -12,7 +13,6 @@ import {
   Sparkles,
   TrendingDown,
   WifiOff,
-  Clock,
 } from "lucide-react";
 
 import heroImage from "@/assets/hero-farm.jpg";
@@ -167,6 +167,10 @@ const plans = [
 ];
 
 function Index() {
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -230,12 +234,6 @@ function Index() {
                 chemical treatment plans — built for South African farmers, in all 11 official
                 languages.
               </p>
-
-              {/* 30-Day Free Trial Callout */}
-              <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary">
-                <Clock className="h-3.5 w-3.5" />
-                <span>30-Day Free Trial on all subscription plans</span>
-              </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button asChild size="lg">
@@ -349,7 +347,7 @@ function Index() {
           </div>
         </section>
 
-        {/* Pricing: Free Tier, R100 (Limited), R200 (Full) */}
+        {/* Pricing */}
         <section id="pricing" className="py-20">
           <div className="mx-auto w-full max-w-7xl px-4 lg:px-6">
             <div className="max-w-2xl">
@@ -408,18 +406,22 @@ function Index() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="border-t border-border bg-gradient-hero py-16 text-primary-foreground">
+        {/* High-Contrast Bottom CTA Banner */}
+        <section className="border-t border-emerald-300 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300 py-16 text-slate-950 shadow-inner">
           <div className="mx-auto flex w-full max-w-7xl flex-col items-start gap-6 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
             <div className="max-w-xl">
-              <h2 className="font-display text-3xl font-extrabold tracking-tight">
+              <h2 className="font-display text-3xl font-black tracking-tight text-slate-950">
                 Your next scan could save your season.
               </h2>
-              <p className="mt-3 text-sm/6 opacity-90">
-                Create a free account and diagnose your first crop photo in under a minute with 30 days free.
+              <p className="mt-3 text-sm sm:text-base font-semibold text-emerald-950 leading-relaxed">
+                Create a free account and diagnose your first crop photo in under a minute.
               </p>
             </div>
-            <Button asChild size="lg" variant="secondary">
+            <Button
+              asChild
+              size="lg"
+              className="bg-slate-950 text-white hover:bg-slate-900 border border-slate-800 font-bold shadow-xl active:scale-95"
+            >
               <Link to="/auth">Get started free</Link>
             </Button>
           </div>
@@ -442,10 +444,12 @@ function Index() {
             </Link>
           </nav>
           <p className="text-xs">
-            © {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.
+            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.
           </p>
         </div>
       </footer>
     </div>
   );
 }
+
+export default Index;

@@ -345,17 +345,17 @@ export function MarketplacePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
       {/* Header Banner */}
-      <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-2xl">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 backdrop-blur-xl relative overflow-hidden shadow-sm dark:shadow-2xl transition-colors">
         <div className="absolute top-0 right-0 h-64 w-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-300">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-xs font-semibold text-amber-800 dark:text-amber-300">
               <Store className="h-3.5 w-3.5" /> South African Input Marketplace
             </span>
-            <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Agricultural Trading Hub
             </h1>
-            <p className="mt-2 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               Source verified seeds, fertilizer, Act 36 remedies, and farm machinery directly from certified commercial suppliers.
             </p>
           </div>
@@ -363,7 +363,7 @@ export function MarketplacePage() {
           <button
             type="button"
             onClick={() => setFormOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-amber-600 to-emerald-600 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-lg shadow-amber-950/60 hover:from-amber-500 hover:to-emerald-500 transition active:scale-95 shrink-0"
+            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:from-amber-500 hover:to-emerald-500 transition active:scale-95 shrink-0 cursor-pointer"
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
             <span>List Product</span>
@@ -380,7 +380,7 @@ export function MarketplacePage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search seed hybrids, fertilizers, cultivars, or suppliers..."
-            className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-800 bg-[#111720]/90 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition shadow-inner"
+            className="w-full h-12 pl-11 pr-4 rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-[#111720]/90 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition shadow-2xs"
           />
         </div>
 
@@ -388,7 +388,7 @@ export function MarketplacePage() {
           <select
             value={selectedProvince}
             onChange={(e) => setSelectedProvince(e.target.value)}
-            className="w-full h-12 px-4 rounded-2xl border border-slate-800 bg-[#111720]/90 text-xs sm:text-sm text-slate-200 focus:border-amber-500 focus:outline-none transition font-medium"
+            className="w-full h-12 px-4 rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-[#111720]/90 text-xs sm:text-sm text-slate-900 dark:text-slate-200 focus:border-amber-500 focus:outline-none transition font-medium cursor-pointer shadow-2xs"
           >
             {PROVINCES.map((p) => (
               <option key={p} value={p}>
@@ -401,18 +401,18 @@ export function MarketplacePage() {
 
       {/* Category Pills */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 shrink-0 mr-1">
-          <Filter className="h-3.5 w-3.5 text-amber-400" /> Sector:
+        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0 mr-1">
+          <Filter className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Sector:
         </span>
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setSelectedCategory(cat)}
             className={cn(
-              "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap",
+              "px-3.5 py-1.5 rounded-xl text-xs font-semibold transition whitespace-nowrap cursor-pointer",
               selectedCategory === cat
-                ? "bg-amber-600 text-white shadow-md shadow-amber-950/50"
-                : "bg-[#111720] border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700",
+                ? "bg-amber-600 text-white shadow-md shadow-amber-950/20 dark:shadow-amber-950/50"
+                : "bg-white dark:bg-[#111720] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
             )}
           >
             {cat}
@@ -423,9 +423,9 @@ export function MarketplacePage() {
       {/* Product Listings Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredListings.length === 0 ? (
-          <div className="col-span-full rounded-3xl border border-dashed border-slate-800 bg-[#131922]/50 p-12 text-center space-y-3">
-            <Store className="h-8 w-8 text-slate-600 mx-auto" />
-            <h3 className="font-bold text-sm text-slate-200">No agricultural products match your filters</h3>
+          <div className="col-span-full rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#131922]/50 p-12 text-center space-y-3 shadow-xs transition-colors">
+            <Store className="h-8 w-8 text-slate-400 dark:text-slate-600 mx-auto" />
+            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">No agricultural products match your filters</h3>
             <p className="text-xs text-slate-500">
               Try adjusting your search terms or set category to "All".
             </p>
@@ -434,31 +434,30 @@ export function MarketplacePage() {
           filteredListings.map((item) => (
             <div
               key={item.id}
-              className="group flex flex-col justify-between rounded-3xl border border-slate-800/90 bg-[#131922] shadow-xl overflow-hidden transition-all hover:border-amber-500/50 hover:shadow-2xl hover:shadow-black/60"
+              className="group flex flex-col justify-between rounded-3xl border border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#131922] shadow-sm dark:shadow-xl overflow-hidden transition-all hover:border-amber-500/50 hover:shadow-md dark:hover:shadow-2xl dark:hover:shadow-black/60"
             >
               <div>
                 {/* Product Image */}
-                <div className="relative h-48 w-full overflow-hidden bg-slate-900 flex items-center justify-center">
+                <div className="relative h-48 w-full overflow-hidden bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                   <img
                     src={item.image_url}
                     alt={item.title}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     onError={(e) => {
-                      // Fallback image if remote host blocks hotlinking
                       (e.target as HTMLImageElement).src =
                         "https://images.unsplash.com/photo-1592417817098-8f3d69106093?auto=format&fit=crop&w=800&q=80";
                     }}
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#131922] via-transparent to-transparent opacity-80 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-80 pointer-events-none" />
 
                   <span className="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-black/70 text-white border border-white/10 backdrop-blur-md">
                     {item.category}
                   </span>
 
                   {item.verified && (
-                    <span className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 backdrop-blur-md">
-                      <BadgeCheck className="h-3 w-3" /> Verified
+                    <span className="absolute top-3 right-3 flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md">
+                      <BadgeCheck className="h-3 w-3 text-emerald-400" /> Verified
                     </span>
                   )}
                 </div>
@@ -466,27 +465,27 @@ export function MarketplacePage() {
                 {/* Content */}
                 <div className="p-5 space-y-3">
                   <div>
-                    <h3 className="font-bold text-sm sm:text-base text-white leading-snug group-hover:text-amber-400 transition line-clamp-2">
+                    <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-snug group-hover:text-amber-600 dark:group-hover:text-amber-400 transition line-clamp-2">
                       {item.title}
                     </h3>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
                       {item.description}
                     </p>
                   </div>
 
                   <div className="flex items-baseline gap-1 pt-1">
-                    <span className="text-lg sm:text-xl font-extrabold text-white">
+                    <span className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
                       {rand.format(Number(item.price))}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-400">/ {item.unit}</span>
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">/ {item.unit}</span>
                   </div>
 
-                  <div className="space-y-1.5 border-t border-slate-800/80 pt-3 text-[11px] text-slate-400">
+                  <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800/80 pt-3 text-[11px] text-slate-500 dark:text-slate-400">
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-300 truncate max-w-[140px]">
+                      <span className="font-semibold text-slate-800 dark:text-slate-300 truncate max-w-[140px]">
                         {item.vendor_name}
                       </span>
-                      <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                         <MapPin className="h-3 w-3 shrink-0" /> {item.province}
                       </span>
                     </div>
@@ -504,7 +503,7 @@ export function MarketplacePage() {
                   href={item.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 border border-slate-700/80 py-2.5 px-3 text-xs font-bold text-slate-200 hover:bg-linear-to-r hover:from-amber-600 hover:to-emerald-600 hover:text-white hover:border-transparent transition active:scale-95 shadow-sm"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 py-2.5 px-3 text-xs font-bold text-slate-800 dark:text-slate-200 hover:bg-gradient-to-r hover:from-amber-600 hover:to-emerald-600 hover:text-white hover:border-transparent transition active:scale-95 shadow-xs"
                 >
                   <span>Order from Supplier</span>
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -517,21 +516,21 @@ export function MarketplacePage() {
 
       {/* Modal Dialog: Post Product Listing */}
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-xl rounded-3xl border border-slate-700 bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-100 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-900 dark:text-slate-100 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
               <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
                   List Your Crop Input
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   Publish seed, chemical, or equipment offerings to the farming network.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setFormOpen(false)}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition"
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -545,52 +544,52 @@ export function MarketplacePage() {
               className="space-y-4"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Product Title</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Product Title</label>
                 <input
                   type="text"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="e.g. Certified Seed Maize, 25kg"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs"
                   maxLength={120}
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Description</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Description</label>
                 <textarea
                   rows={3}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="Include cultivar details, germination rate, active ingredients, or application instructions..."
-                  className="w-full p-3 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition resize-none leading-relaxed"
+                  className="w-full p-3 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition resize-none leading-relaxed shadow-2xs"
                   maxLength={1000}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Price (ZAR)</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Price (ZAR)</label>
                   <input
                     type="number"
                     min={1}
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     placeholder="e.g. 1850"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs"
                     required
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Unit of Measure</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Unit of Measure</label>
                   <input
                     type="text"
                     value={form.unit}
                     onChange={(e) => setForm({ ...form, unit: e.target.value })}
                     placeholder="e.g. 50kg bag, 5L, 50k kernels"
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs"
                     required
                   />
                 </div>
@@ -598,11 +597,11 @@ export function MarketplacePage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Category</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Category</label>
                   <select
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white focus:border-amber-500 focus:outline-none transition font-medium"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs cursor-pointer"
                   >
                     {CATEGORIES.filter((c) => c !== "All").map((c) => (
                       <option key={c} value={c}>
@@ -613,11 +612,11 @@ export function MarketplacePage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Province</label>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Province</label>
                   <select
                     value={form.province}
                     onChange={(e) => setForm({ ...form, province: e.target.value })}
-                    className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white focus:border-amber-500 focus:outline-none transition font-medium"
+                    className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs cursor-pointer"
                   >
                     {PROVINCES.filter((p) => p !== "All Provinces").map((p) => (
                       <option key={p} value={p}>
@@ -629,53 +628,53 @@ export function MarketplacePage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <ImageIcon className="h-3.5 w-3.5 text-amber-400" /> Photo URL (Direct image link or data URL)
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Photo URL (Direct image link or data URL)
                 </label>
                 <input
                   type="text"
                   value={form.image_url}
                   onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                   placeholder="https://assets.supplier.co.za/seeds.jpg"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition shadow-2xs"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">Contact Number</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Contact Number</label>
                 <input
                   type="text"
                   value={form.contact}
                   onChange={(e) => setForm({ ...form, contact: e.target.value })}
                   placeholder="+27 82 000 0000"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition font-medium shadow-2xs"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-300">External Store or WhatsApp URL</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">External Store or WhatsApp URL</label>
                 <input
                   type="text"
                   value={form.external_url}
                   onChange={(e) => setForm({ ...form, external_url: e.target.value })}
                   placeholder="https://www.pannar.com or https://wa.me/27820000000"
-                  className="w-full h-11 px-3.5 rounded-xl border border-slate-800 bg-[#111720] text-xs text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition"
+                  className="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-[#111720] text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-amber-500 focus:outline-none transition shadow-2xs"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setFormOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-xs font-semibold text-slate-300 hover:text-white transition"
+                  className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createMutation.isPending}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-linear-to-r from-amber-600 to-emerald-600 text-xs font-bold text-white shadow-lg shadow-amber-950/40 hover:from-amber-500 hover:to-emerald-500 transition active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-600 text-xs font-bold text-white shadow-md hover:from-amber-500 hover:to-emerald-500 transition active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="h-3.5 w-3.5" />
                   <span>{createMutation.isPending ? "Publishing…" : "Publish Listing"}</span>
@@ -688,3 +687,5 @@ export function MarketplacePage() {
     </div>
   );
 }
+
+export default MarketplacePage;

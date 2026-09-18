@@ -63,7 +63,7 @@ function AdvisorPage() {
     if (meta?.display_name?.trim()) return meta.display_name.trim();
     if (meta?.name?.trim()) return meta.name.trim();
     if (meta?.first_name?.trim()) {
-      return `${meta.first_name} ${meta.last_name || ""}`.trim();
+      return `${meta.first_name}${meta.last_name || ""}`.trim();
     }
     if (user?.email) {
       const parts = user.email.split("@");
@@ -135,7 +135,7 @@ function AdvisorPage() {
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setInputMessage((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        setInputMessage((prev) => (prev ? `${prev}${transcript}` : transcript));
         setIsListening(false);
       };
 
@@ -237,7 +237,6 @@ function AdvisorPage() {
     }
 
     try {
-      // Direct call to Supabase Edge Function without mock fallbacks
       const response = await supabase.functions.invoke("diagnose-crop", {
         body: {
           customPrompt: textToSend.trim(),
@@ -248,7 +247,6 @@ function AdvisorPage() {
         },
       });
 
-      // Catch and surface function invocation errors (HTTP 4xx/5xx)
       if (response.error) {
         let detailedError = response.error.message;
 
@@ -262,7 +260,6 @@ function AdvisorPage() {
         throw new Error(detailedError);
       }
 
-      // Check for an error payload inside a 200 response
       if (response.data?.error) {
         throw new Error(response.data.error);
       }
@@ -289,7 +286,6 @@ function AdvisorPage() {
       const errorMessage = err.message || "Failed to reach Edge Function";
       toast.error(errorMessage);
 
-      // Display the raw error directly in the chat view so you know exactly what failed
       const errorMsgItem: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: "advisor",
@@ -311,10 +307,10 @@ function AdvisorPage() {
         {messages.length === 0 ? (
           <div className="h-full flex flex-col justify-center items-center text-center px-4 space-y-8 animate-in fade-in duration-300">
             <div className="space-y-2">
-              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-sky-400">
+              <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 dark:from-emerald-400 dark:via-teal-300 dark:to-sky-400">
                 Hello, {farmerName}
               </h1>
-              <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto">
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base max-w-md mx-auto">
                 Ask questions about your crops, watering, bugs, soil, or upload a leaf photo.
               </p>
             </div>
@@ -324,13 +320,13 @@ function AdvisorPage() {
                 <button
                   key={idx}
                   onClick={() => handleSendMessage(item.title)}
-                  className="p-4 rounded-2xl border border-slate-800 bg-[#161d26]/80 hover:bg-[#1b2430] hover:border-slate-700 transition group text-left space-y-1 cursor-pointer"
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#161d26]/80 hover:bg-slate-50 dark:hover:bg-[#1b2430] hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs dark:shadow-none transition group text-left space-y-1 cursor-pointer"
                 >
-                  <div className="flex items-center justify-between text-xs font-medium text-slate-200 group-hover:text-emerald-400 transition">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                     <span>{item.title}</span>
-                    <Sparkles className="h-3.5 w-3.5 text-slate-500 group-hover:text-emerald-400" />
+                    <Sparkles className="h-3.5 w-3.5 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
                   </div>
-                  <p className="text-[12px] text-slate-400 leading-snug">{item.desc}</p>
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-snug">{item.desc}</p>
                 </button>
               ))}
             </div>
@@ -344,9 +340,9 @@ function AdvisorPage() {
               <div key={msg.id} className="space-y-3">
                 {isUser ? (
                   <div className="flex justify-end">
-                    <div className="max-w-2xl rounded-3xl bg-[#1e293b] text-slate-100 px-5 py-3 text-sm leading-relaxed border border-slate-700/60 shadow-sm space-y-2">
+                    <div className="max-w-2xl rounded-3xl bg-slate-100 dark:bg-[#1e293b] text-slate-900 dark:text-slate-100 px-5 py-3 text-sm leading-relaxed border border-slate-200 dark:border-slate-700/60 shadow-xs space-y-2">
                       {msg.imagePreviewUrl && (
-                        <div className="rounded-xl overflow-hidden border border-slate-700 max-w-xs mb-2">
+                        <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-w-xs mb-2">
                           <img
                             src={msg.imagePreviewUrl}
                             alt="Crop specimen"
@@ -360,9 +356,9 @@ function AdvisorPage() {
                 ) : (
                   <div className="flex gap-3 text-sm leading-relaxed max-w-3xl">
                     <div
-                      className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold shadow-sm ${
+                      className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold shadow-xs ${
                         msg.isError
-                          ? "bg-rose-500/20 border border-rose-500/40 text-rose-400"
+                          ? "bg-rose-50 border border-rose-200 text-rose-600 dark:bg-rose-500/20 dark:border-rose-500/40 dark:text-rose-400"
                           : "bg-gradient-to-tr from-emerald-500 to-teal-400 text-slate-950"
                       }`}
                     >
@@ -372,8 +368,8 @@ function AdvisorPage() {
                       <div
                         className={`whitespace-pre-line leading-relaxed p-4 rounded-2xl border ${
                           msg.isError
-                            ? "bg-rose-950/20 border-rose-500/30 text-rose-300 font-mono text-xs"
-                            : "bg-[#161d26] border-slate-800 text-slate-200"
+                            ? "bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-500/30 dark:text-rose-300 font-mono text-xs"
+                            : "bg-white dark:bg-[#161d26] border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 shadow-2xs"
                         }`}
                       >
                         {msg.text}
@@ -386,8 +382,8 @@ function AdvisorPage() {
                             onClick={() => toggleSpeak(msg.id, msg.text)}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
                               isCurrentlySpeaking
-                                ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                                : "border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 bg-[#161d26]/60"
+                                ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-500/20 dark:border-emerald-500/40 dark:text-emerald-400"
+                                : "border-slate-200 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 bg-white dark:bg-[#161d26]/60 shadow-2xs"
                             }`}
                           >
                             {isCurrentlySpeaking ? (
@@ -416,9 +412,9 @@ function AdvisorPage() {
               AI
             </div>
             <div className="flex items-center gap-1.5 pt-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.3s]" />
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:-0.15s]" />
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-bounce" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" />
             </div>
           </div>
         )}
@@ -429,7 +425,7 @@ function AdvisorPage() {
       {/* Floating Bottom Input Bar */}
       <div className="pt-2 pb-4">
         {attachedImage && (
-          <div className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#1a232f] border border-slate-700 text-xs text-slate-200">
+          <div className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white dark:bg-[#1a232f] border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 shadow-xs">
             <img
               src={attachedImage.previewUrl}
               alt="Preview"
@@ -438,14 +434,14 @@ function AdvisorPage() {
             <span className="truncate max-w-[200px]">{attachedImage.file.name}</span>
             <button
               onClick={() => setAttachedImage(null)}
-              className="hover:text-rose-400 transition cursor-pointer"
+              className="hover:text-rose-500 transition cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
         )}
 
-        <div className="relative rounded-3xl border border-slate-700/80 bg-[#161d26] shadow-xl focus-within:border-slate-500 transition px-4 py-2.5">
+        <div className="relative rounded-3xl border border-slate-300 dark:border-slate-700/80 bg-white dark:bg-[#161d26] shadow-sm dark:shadow-xl focus-within:border-emerald-500 dark:focus-within:border-slate-500 transition px-4 py-2.5">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -458,7 +454,7 @@ function AdvisorPage() {
               }
             }}
             placeholder="Ask a question or tap the mic to speak..."
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none resize-none pr-24 max-h-40 leading-relaxed"
+            className="w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none resize-none pr-24 max-h-40 leading-relaxed"
           />
 
           <div className="flex items-center gap-1.5 absolute right-3 bottom-2.5">
@@ -466,7 +462,7 @@ function AdvisorPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Attach leaf or crop photo"
-              className="p-2 rounded-full text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition cursor-pointer"
+              className="p-2 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               <ImageIcon className="h-4 w-4" />
             </button>
@@ -485,8 +481,8 @@ function AdvisorPage() {
               title={isListening ? "Stop listening" : "Voice input"}
               className={`p-2 rounded-full transition cursor-pointer ${
                 isListening
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  ? "bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/40 animate-pulse"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800"
               }`}
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -496,7 +492,7 @@ function AdvisorPage() {
               type="button"
               disabled={isTyping || (!inputMessage.trim() && !attachedImage)}
               onClick={() => handleSendMessage()}
-              className="p-2 rounded-full bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition disabled:opacity-30 disabled:hover:bg-emerald-500 active:scale-95 cursor-pointer"
+              className="p-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white transition disabled:opacity-30 disabled:hover:bg-emerald-600 active:scale-95 cursor-pointer shadow-xs"
             >
               <ArrowUp className="h-4 w-4 stroke-[2.5]" />
             </button>

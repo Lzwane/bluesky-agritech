@@ -44,6 +44,11 @@ function AuthPage() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
 
+  // The Login/Sign up page is strictly locked to Blackboard Dark Mode
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
+
   useEffect(() => {
     if (!loading && session) {
       navigate({ to: "/app", replace: true });
@@ -103,7 +108,6 @@ function AuthPage() {
         if (data.session) {
           navigate({ to: "/app", replace: true });
         } else {
-          // If email auto-confirmation is enabled, log them in immediately
           const loginRes = await supabase.auth.signInWithPassword({
             email: parsed.data.email,
             password: parsed.data.password,
