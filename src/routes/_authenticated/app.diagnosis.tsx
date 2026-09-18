@@ -19,6 +19,9 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/lib/i18n";
+import { useTierAccess } from "@/hooks/useTierAccess";
+import { TierBanner } from "@/components/app/TierBanner";
 
 export const Route = createFileRoute("/_authenticated/app/diagnosis")({
   component: DiagnosisPage,
@@ -81,6 +84,8 @@ const SCAN_TELEMETRY_STEPS = [
 
 export function DiagnosisPage() {
   const { user } = useAuth();
+  const { t, language } = useLanguage();
+  const { checkLimit, isOwner, currentTier } = useTierAccess();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeView, setActiveView] = useState<"diagnose" | "history">("diagnose");
@@ -164,7 +169,9 @@ export function DiagnosisPage() {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = typeof reader.result === "string" ? reader.result : "";
-      const base64Clean = base64String.includes(",") ? base64String.split(",")[1] : base64String;
+      const base64Clean: string = base64String.includes(",")
+        ? base64String.split(",")[1] ?? base64String
+        : base64String;
       if (base64Clean) {
         setImageBase64(base64Clean);
       }
@@ -260,6 +267,11 @@ export function DiagnosisPage() {
   };
 
   const handleRunDiagnosis = async () => {
+    const quotaCheck = await checkLimit("diagnosis");
+    if (!quotaCheck.allowed) {
+      return;
+    }
+
     if (!imageBase64) {
       toast.error("Please upload or capture a crop image first.");
       return;
@@ -274,6 +286,7 @@ export function DiagnosisPage() {
           imageBase64,
           imageMediaType,
           crop: selectedCrop,
+          preferredLanguage: language,
         },
       });
 
@@ -376,6 +389,14 @@ export function DiagnosisPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-16 font-sans">
+      <TierBanner />
+      {currentTier === "grower_pro" && !isOwner && (
+        <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200 flex items-center justify-between">
+          <span>Grower Pro Quota: 40 AI Scans / Month (40/mo cap enforced)</span>
+          <span className="font-mono font-bold">Act 36 Enabled</span>
+        </div>
+      )}
+
       {/* Top Header & Tab Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 transition-colors">
         <div>
@@ -465,23 +486,19 @@ export function DiagnosisPage() {
                         className="max-h-64 w-full object-contain rounded-xl shadow-sm"
                       />
 
-                      {/* Cool Multimodal Scan Overlay */}
                       {analyzing && (
                         <div className="absolute inset-0 z-20 overflow-hidden rounded-xl bg-emerald-950/25 backdrop-blur-[1px] border border-emerald-500/50">
-                          {/* Animated Neon Laser Sweep */}
                           <div
                             className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#10b981] animate-pulse transition-all duration-300"
                             style={{ animation: "scanLine 2.2s ease-in-out infinite" }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-emerald-500/20 pointer-events-none" />
                           
-                          {/* Targeting Corner Brackets */}
                           <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-400 shadow-xs" />
                           <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-400 shadow-xs" />
                           <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-400 shadow-xs" />
                           <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-400 shadow-xs" />
 
-                          {/* Floating Telemetry Pill */}
                           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 border border-emerald-500/60 px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-2xl backdrop-blur-md whitespace-nowrap">
                             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
                             <span className="text-[11px] font-mono font-bold text-emerald-300 tracking-wide">
@@ -771,7 +788,7 @@ export function DiagnosisPage() {
                   Symptoms Observed
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedHistoryItem.symptoms_observed.map((sym, i) => (
+                  {selectedHistoryItem.symptoms_observed.map((sym: string, i: number) => (
                     <span key={i} className="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-md text-slate-700 dark:text-slate-300">
                       • {sym}
                     </span>

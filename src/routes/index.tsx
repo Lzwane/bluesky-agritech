@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Bug,
   Camera,
@@ -13,6 +13,9 @@ import {
   Sparkles,
   TrendingDown,
   WifiOff,
+  ShieldAlert,
+  FileText,
+  X,
 } from "lucide-react";
 
 import heroImage from "@/assets/hero-farm.jpg";
@@ -167,12 +170,20 @@ const plans = [
 ];
 
 function Index() {
+  const [agreementModalOpen, setAgreementModalOpen] = useState(false);
+  const [modalTab, setModalTab] = useState<"agreement" | "privacy" | "cookies">("agreement");
+
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
 
+  const openLegalModal = (tab: "agreement" | "privacy" | "cookies") => {
+    setModalTab(tab);
+    setAgreementModalOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-sans">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3.5 lg:px-6">
@@ -406,21 +417,22 @@ function Index() {
           </div>
         </section>
 
-        {/* High-Contrast Bottom CTA Banner */}
-        <section className="border-t border-emerald-300 bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-300 py-16 text-slate-950 shadow-inner">
-          <div className="mx-auto flex w-full max-w-7xl flex-col items-start gap-6 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
+        {/* High-Contrast Bottom CTA Banner with Cool Grey Canvas & Black Text */}
+        <section className="border-t border-slate-200 bg-slate-100/90 py-20 text-slate-950 relative overflow-hidden shadow-inner">
+          <div className="absolute top-0 right-10 h-72 w-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="mx-auto flex w-full max-w-7xl flex-col items-start gap-6 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-6 relative z-10">
             <div className="max-w-xl">
-              <h2 className="font-display text-3xl font-black tracking-tight text-slate-950">
+              <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
                 Your next scan could save your season.
               </h2>
-              <p className="mt-3 text-sm sm:text-base font-semibold text-emerald-950 leading-relaxed">
+              <p className="mt-3 text-sm sm:text-base font-medium text-slate-700 leading-relaxed">
                 Create a free account and diagnose your first crop photo in under a minute.
               </p>
             </div>
             <Button
               asChild
               size="lg"
-              className="bg-slate-950 text-white hover:bg-slate-900 border border-slate-800 font-bold shadow-xl active:scale-95"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-950/20 active:scale-95 px-8 py-6 rounded-2xl cursor-pointer"
             >
               <Link to="/auth">Get started free</Link>
             </Button>
@@ -428,18 +440,39 @@ function Index() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card py-10">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between lg:px-6">
+      {/* Footer with clean, standard legal links */}
+      <footer className="border-t border-border bg-card py-12">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <Logo />
-          <nav className="flex flex-wrap gap-x-6 gap-y-2">
-            <Link to="/library" className="hover:text-foreground">
+          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm">
+            <Link to="/library" className="hover:text-foreground transition">
               Library
             </Link>
-            <a href="#pricing" className="hover:text-foreground">
+            <a href="#pricing" className="hover:text-foreground transition">
               Pricing
             </a>
-            <Link to="/auth" className="hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => openLegalModal("agreement")}
+              className="hover:text-foreground transition cursor-pointer text-left font-medium"
+            >
+              User Agreement
+            </button>
+            <button
+              type="button"
+              onClick={() => openLegalModal("privacy")}
+              className="hover:text-foreground transition cursor-pointer text-left font-medium"
+            >
+              Privacy Policy
+            </button>
+            <button
+              type="button"
+              onClick={() => openLegalModal("cookies")}
+              className="hover:text-foreground transition cursor-pointer text-left font-medium"
+            >
+              Cookie Policy
+            </button>
+            <Link to="/auth" className="hover:text-foreground transition">
               Sign in
             </Link>
           </nav>
@@ -448,6 +481,132 @@ function Index() {
           </p>
         </div>
       </footer>
+
+      {/* User Agreement, Privacy Policy, & Cookie Policy Modal */}
+      {agreementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-2xl text-foreground space-y-6">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-bold tracking-tight">Legal &amp; User Agreement</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgreementModalOpen(false)}
+                className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Navigation Tabs */}
+            <div className="flex gap-2 border-b border-border pb-2 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setModalTab("agreement")}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  modalTab === "agreement"
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                User Agreement (Terms)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab("privacy")}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  modalTab === "privacy"
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Privacy Policy (POPIA)
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab("cookies")}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  modalTab === "cookies"
+                    ? "bg-primary text-primary-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Cookie Policy
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="text-xs sm:text-sm text-muted-foreground space-y-4 leading-relaxed">
+              {modalTab === "agreement" && (
+                <>
+                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-300 flex items-start gap-3">
+                    <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-xs uppercase tracking-wider">
+                        Important Agronomic &amp; Legal Limitation
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed">
+                        AI Crop Detective outputs, foliar diagnoses, and AI Agronomist recommendations are provided exclusively as decision-support information. They do not constitute formal, licensed agronomic warranties or replace certified agronomist evaluations. BlueSky AgriTech Pty LTD accepts no financial liability for crop yield shortfalls, phytotoxicity, or misapplication of agrochemicals. All agricultural remedies must strictly comply with the South African Fertilizers, Farm Feeds, Agricultural Remedies and Stock Remedies Act (Act 36 of 1947).
+                      </p>
+                    </div>
+                  </div>
+
+                  <h3 className="font-bold text-foreground text-sm">1. Platform Services &amp; Eligibility</h3>
+                  <p>
+                    By accessing or using the BlueSky AgriTech platform, you represent that you are engaged in agricultural production, research, or commercial enterprise within the Republic of South Africa or Southern Africa and agree to adhere to all terms contained herein (Version v1.2-2026).
+                  </p>
+
+                  <h3 className="font-bold text-foreground text-sm">2. Account Responsibility</h3>
+                  <p>
+                    Users are responsible for maintaining the confidentiality of their account credentials and are fully liable for all activities, marketplace listings, and forum communications conducted under their profile.
+                  </p>
+
+                  <h3 className="font-bold text-foreground text-sm">3. Agrochemical &amp; Spray Application Compliance</h3>
+                  <p>
+                    Any treatment, dosage, or chemical protocol recommended by the AI engine must be independently verified against official product labels registered under Act 36 of 1947 prior to handling, tank-mixing, or spraying. Certified Personal Protective Equipment (PPE) and mandatory pre-harvest withholding periods (PHI) must be strictly enforced by the user.
+                  </p>
+                </>
+              )}
+
+              {modalTab === "privacy" && (
+                <>
+                  <h3 className="font-bold text-foreground text-sm">Protection of Personal Information Act (POPIA) Notice</h3>
+                  <p>
+                    BlueSky AgriTech Pty LTD respects your privacy and is fully committed to compliance with the South African Protection of Personal Information Act (Act 4 of 2013).
+                  </p>
+                  <p>
+                    We collect your full name, farm identity, province, contact information, and crop imagery solely to deliver tailored foliar diagnostics, generate agronomic alerts, and facilitate agricultural commerce. Your telemetry data is never sold to third-party data brokers.
+                  </p>
+                </>
+              )}
+
+              {modalTab === "cookies" && (
+                <>
+                  <h3 className="font-bold text-foreground text-sm">Cookie &amp; Local Storage Policy</h3>
+                  <p>
+                    BlueSky AgriTech utilizes essential browser cookies and local storage tokens (`bluesky_theme_mode`, session authentication tokens, and cached diagnostic registries) to preserve your user preferences and offline-tolerant diagnostic histories.
+                  </p>
+                  <p>
+                    You can manage or disable non-essential cookies via your browser settings; however, disabling local tokens may affect persistent theme preferences and offline history access.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-border flex justify-end">
+              <Button
+                type="button"
+                onClick={() => setAgreementModalOpen(false)}
+                className="cursor-pointer"
+              >
+                Close Legal Notice
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

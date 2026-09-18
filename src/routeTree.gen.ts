@@ -14,7 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
-import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
+import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as AuthenticatedAppAdvisorRouteImport } from './routes/_authenticated/app.advisor'
 import { Route as AuthenticatedAppDiagnosisRouteImport } from './routes/_authenticated/app.diagnosis'
 import { Route as AuthenticatedAppForumRouteImport } from './routes/_authenticated/app.forum'
@@ -49,6 +50,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppAdvisorRoute = AuthenticatedAppAdvisorRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/library': typeof LibraryRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/diagnosis': typeof AuthenticatedAppDiagnosisRoute
   '/app/forum': typeof AuthenticatedAppForumRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/library': typeof LibraryRoute
+  '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/diagnosis': typeof AuthenticatedAppDiagnosisRoute
   '/app/forum': typeof AuthenticatedAppForumRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/library': typeof LibraryRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/_authenticated/app/diagnosis': typeof AuthenticatedAppDiagnosisRoute
   '/_authenticated/app/forum': typeof AuthenticatedAppForumRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/library'
     | '/app'
+    | '/app/admin'
     | '/app/advisor'
     | '/app/diagnosis'
     | '/app/forum'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/library'
+    | '/app/admin'
     | '/app/advisor'
     | '/app/diagnosis'
     | '/app/forum'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/library'
     | '/_authenticated/app'
+    | '/_authenticated/app/admin'
     | '/_authenticated/app/advisor'
     | '/_authenticated/app/diagnosis'
     | '/_authenticated/app/forum'
@@ -218,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/admin': {
+      id: '/_authenticated/app/admin'
+      path: '/admin'
+      fullPath: '/app/admin'
+      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advisor': {
       id: '/_authenticated/app/advisor'
       path: '/advisor'
@@ -264,6 +283,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
   AuthenticatedAppAdvisorRoute: typeof AuthenticatedAppAdvisorRoute
   AuthenticatedAppDiagnosisRoute: typeof AuthenticatedAppDiagnosisRoute
   AuthenticatedAppForumRoute: typeof AuthenticatedAppForumRoute
@@ -274,6 +294,7 @@ interface AuthenticatedAppRouteChildren {
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
   AuthenticatedAppAdvisorRoute: AuthenticatedAppAdvisorRoute,
   AuthenticatedAppDiagnosisRoute: AuthenticatedAppDiagnosisRoute,
   AuthenticatedAppForumRoute: AuthenticatedAppForumRoute,

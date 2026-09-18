@@ -2,7 +2,19 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Leaf, ShieldCheck, Sprout, ArrowRight, Sparkles } from "lucide-react";
+import {
+  Leaf,
+  ShieldCheck,
+  Sprout,
+  ArrowRight,
+  Sparkles,
+  FileText,
+  ShieldAlert,
+  X,
+  Lock,
+  LayoutDashboard,
+  AppWindow,
+} from "lucide-react";
 
 import logoImg from "@/assets/BlueSky_AgrITech_Logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +40,9 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+const CURRENT_AGREEMENT_VERSION = "v1.2-2026";
+const OWNER_EMAIL = "mnisithokozani829@gmail.com";
+
 const credentials = z.object({
   email: z.string().trim().email({ message: "Please enter a valid email address" }).max(255),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }).max(72),
@@ -39,24 +54,40 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [showPortalChoice, setShowPortalChoice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { session, loading } = useAuth();
   const navigate = useNavigate();
 
-  // The Login/Sign up page is strictly locked to Blackboard Dark Mode
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
 
   useEffect(() => {
     if (!loading && session) {
-      navigate({ to: "/app", replace: true });
+      if (session.user.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+        setShowPortalChoice(true);
+      } else {
+        navigate({ to: "/app", replace: true });
+      }
     }
   }, [loading, session, navigate]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    if (mode === "signup" && !agreedToTerms) {
+      setErrors({
+        agreement:
+          "You must read and accept the User Agreement and Legal Disclaimers before creating an account.",
+      });
+      toast.error("Please accept the User Agreement to proceed.");
+      return;
+    }
+
     const parsed = credentials.safeParse({ email, password, displayName });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
@@ -66,12 +97,14 @@ function AuthPage() {
       setErrors(fieldErrors);
       return;
     }
+
     setErrors({});
     setBusy(true);
 
     try {
       if (mode === "signup") {
         const cleanName = parsed.data.displayName || parsed.data.email.split("@")[0];
+        const acceptanceTimestamp = new Date().toISOString();
 
         const { data, error } = await supabase.auth.signUp({
           email: parsed.data.email,
@@ -80,6 +113,9 @@ function AuthPage() {
             data: {
               display_name: cleanName,
               full_name: cleanName,
+              agreement_version: CURRENT_AGREEMENT_VERSION,
+              agreement_accepted_at: acceptanceTimestamp,
+              agreement_accepted: true,
             },
           },
         });
@@ -103,28 +139,38 @@ function AuthPage() {
           return;
         }
 
+        if (data.user?.id) {
+          await (supabase as any).from("profiles").upsert(
+            {
+              id: data.user.id,
+              full_name: cleanName,
+              updated_at: acceptanceTimestamp,
+            },
+            { onConflict: "id" }
+          );
+        }
+
         toast.success("Account created successfully! Welcome to BlueSky.");
 
         if (data.session) {
-          navigate({ to: "/app", replace: true });
-        } else {
-          const loginRes = await supabase.auth.signInWithPassword({
-            email: parsed.data.email,
-            password: parsed.data.password,
-          });
-          if (!loginRes.error) {
-            navigate({ to: "/app", replace: true });
+          if (parsed.data.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+            setShowPortalChoice(true);
           } else {
-            toast.info("Please check your email inbox to confirm your account.");
+            navigate({ to: "/app", replace: true });
           }
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: parsed.data.email,
           password: parsed.data.password,
         });
         if (error) throw error;
-        navigate({ to: "/app", replace: true });
+
+        if (data.user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
+          setShowPortalChoice(true);
+        } else {
+          navigate({ to: "/app", replace: true });
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
@@ -139,7 +185,7 @@ function AuthPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/app`,
+          redirectTo: `${window.location.origin}/auth`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
@@ -155,7 +201,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-12 bg-[#0d1217]">
+    <div className="grid min-h-screen w-full lg:grid-cols-12 bg-[#0d1217] font-sans">
       {/* Left Info Column */}
       <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between overflow-hidden p-8 xl:p-10 bg-gradient-to-br from-emerald-950/70 via-slate-900 to-[#0b1015] border-r border-slate-800/60">
         <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
@@ -166,7 +212,9 @@ function AuthPage() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <span className="text-[11px] uppercase tracking-widest text-emerald-400 font-bold">AgriTech Intelligence</span>
+            <span className="text-[11px] uppercase tracking-widest text-emerald-400 font-bold">
+              AgriTech Intelligence
+            </span>
             <p className="text-[11px] text-slate-400">Precision Crop Health Ecosystem</p>
           </div>
         </div>
@@ -189,7 +237,7 @@ function AuthPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-white text-xs">Instant Visual Diagnostic</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Automated visual disease & pest scan.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Automated visual disease &amp; pest scan.</p>
               </div>
             </div>
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-3.5 backdrop-blur-sm flex items-start gap-3">
@@ -198,7 +246,7 @@ function AuthPage() {
               </div>
               <div>
                 <h3 className="font-semibold text-white text-xs">Targeted Remedies</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Organic recipes & approved treatments.</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Organic recipes &amp; approved Act 36 treatments.</p>
               </div>
             </div>
           </div>
@@ -316,6 +364,70 @@ function AuthPage() {
                 )}
               </div>
 
+              {/* User Agreement Acceptance Checkbox (Signup Only) */}
+              {mode === "signup" && (
+                <div className="pt-1">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={agreedToTerms}
+                      onChange={(e) => {
+                        setAgreedToTerms(e.target.checked);
+                        if (e.target.checked && errors["agreement"]) {
+                          setErrors((prev) => {
+                            const copy = { ...prev };
+                            delete copy["agreement"];
+                            return copy;
+                          });
+                        }
+                      }}
+                      className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 transition cursor-pointer shrink-0"
+                    />
+                    <span className="text-[11px] text-slate-300 leading-snug">
+                      I have read and agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLegalModalOpen(true);
+                        }}
+                        className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer"
+                      >
+                        User Agreement ({CURRENT_AGREEMENT_VERSION})
+                      </button>
+                      , acknowledging that AI recommendations are decision-support aids and not a replacement for certified agronomic or Act 36 safety advice. View{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLegalModalOpen(true);
+                        }}
+                        className="text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        Privacy Policy
+                      </button>{" "}
+                      &amp;{" "}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setLegalModalOpen(true);
+                        }}
+                        className="text-emerald-400 hover:underline cursor-pointer"
+                      >
+                        Cookie Policy
+                      </button>
+                      .
+                    </span>
+                  </label>
+                  {errors["agreement"] && (
+                    <p className="mt-1.5 text-xs font-medium text-rose-400">
+                      {errors["agreement"]}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Action Button */}
               <button
                 type="submit"
@@ -326,7 +438,7 @@ function AuthPage() {
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
                   <>
-                    <span>{mode === "signin" ? "Sign In" : "Create & Launch App"}</span>
+                    <span>{mode === "signin" ? "Sign In" : "Accept & Create Account"}</span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </>
                 )}
@@ -335,7 +447,9 @@ function AuthPage() {
 
             <div className="my-6 flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-800" />
-              <span className="text-[11px] font-medium tracking-wider uppercase text-slate-500">Quick Access</span>
+              <span className="text-[11px] font-medium tracking-wider uppercase text-slate-500">
+                Quick Access
+              </span>
               <span className="h-px flex-1 bg-slate-800" />
             </div>
 
@@ -390,6 +504,107 @@ function AuthPage() {
           </p>
         </div>
       </div>
+
+      {/* Nice Portal Choice Modal for Owner */}
+      {showPortalChoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl border border-emerald-500/40 bg-[#161d26] p-7 shadow-2xl space-y-6">
+            <div className="text-center space-y-2">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <Lock className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-extrabold text-white">Owner Access Verified</h3>
+              <p className="text-xs text-slate-400">
+                Authenticated as <span className="text-emerald-400 font-mono">{session?.user.email}</span>. Select destination workspace:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3.5">
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/app/admin", replace: true })}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-emerald-500/50 bg-gradient-to-r from-emerald-950/50 to-slate-900 hover:border-emerald-400 transition group text-left cursor-pointer"
+              >
+                <div className="h-11 w-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                  <LayoutDashboard className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
+                    Executive Admin Dashboard
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    View app revenue, active users, subscription analytics, and audit logs.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/app", replace: true })}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-slate-700 bg-slate-900/60 hover:border-slate-600 transition group text-left cursor-pointer"
+              >
+                <div className="h-11 w-11 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center shrink-0 border border-slate-700">
+                  <AppWindow className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
+                    Standard Farmer Application
+                  </h4>
+                  <p className="text-xs text-slate-400">
+                    Use foliar scanner &amp; AI agronomist with uncapped owner privileges.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Legal & User Agreement Modal for Auth */}
+      {legalModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-700 bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-200 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">
+                  User Agreement ({CURRENT_AGREEMENT_VERSION}) &amp; Legal Disclaimers
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLegalModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-300 text-xs flex items-start gap-2.5 leading-relaxed">
+              <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block text-amber-200 uppercase font-bold text-[11px]">
+                  Limitation of Agronomic Liability
+                </strong>
+                The AI Crop Detective platform and Agronomist AI outputs provide automated, predictive insights intended strictly for decision-support purposes. They do not constitute certified professional agronomic warranties or replace on-site physical evaluations by licensed agricultural professionals.
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setLegalModalOpen(false);
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer"
+              >
+                Accept Terms
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -416,3 +631,5 @@ function GoogleIcon() {
     </svg>
   );
 }
+
+export default AuthPage;

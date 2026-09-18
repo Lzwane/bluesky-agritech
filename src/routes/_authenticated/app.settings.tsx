@@ -17,6 +17,7 @@ import {
   Clock,
   Tractor,
   Languages,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
 });
 
 type ThemeSetting = "dark" | "light" | "system";
+const OWNER_EMAIL = "mnisithokozani829@gmail.com";
 
 export const SA_LANGUAGES: { code: LanguageCode; name: string; nativeName: string }[] = [
   { code: "en", name: "English", nativeName: "English" },
@@ -72,13 +74,14 @@ const TIERS: SubscriptionTier[] = [
     name: "Free Community",
     priceZAR: 0,
     cadence: "Free Forever",
-    description: "Standard access to evaluate foliar diagnostics and community exchange.",
+    description: "Essential access to review farm records, marketplace trade, and community discussions.",
     features: [
-      { title: "0 AI foliar scans / month", included: false },
-      { title: "No new library research queries", included: false },
-      { title: "Unlimited Marketplace access", included: true },
-      { title: "Unlimited Community Forum posts", included: true },
-      { title: "Full Dashboard telemetry view", included: true },
+      { title: "Standard diagnostic history archive", included: true },
+      { title: "Unlimited Marketplace trade access", included: true },
+      { title: "Farmer community forum discussions", included: true },
+      { title: "Live weather & field telemetry hub", included: true },
+      { title: "Foliar vision AI scanner allocations", included: false },
+      { title: "Priority agronomist consultations", included: false },
     ],
   },
   {
@@ -87,14 +90,14 @@ const TIERS: SubscriptionTier[] = [
     priceZAR: 100,
     cadence: "/ month",
     badge: "Most Popular",
-    description: "Ideal for active smallholders requiring regular monthly pest and symptom diagnostics.",
+    description: "Designed for smallholders and emerging farmers needing frequent pest and disease diagnostics.",
     features: [
-      { title: "25 AI foliar scans / month", included: true },
-      { title: "25 custom library research queries", included: true },
-      { title: "Unlimited Marketplace buy & sell", included: true },
-      { title: "Unlimited Community Forum posts", included: true },
-      { title: "Unlimited Agronomist AI chat", included: true },
-      { title: "Full interactive Dashboard", included: true },
+      { title: "25 instant AI foliar scans / month", included: true },
+      { title: "40 Agronomist AI voice chats / month", included: true },
+      { title: "Full pathology database library access", included: true },
+      { title: "Unlimited Marketplace buy & sell listings", included: true },
+      { title: "Active community forum participation", included: true },
+      { title: "Act 36 registered remedy recommendations", included: true },
     ],
   },
   {
@@ -103,14 +106,14 @@ const TIERS: SubscriptionTier[] = [
     priceZAR: 200,
     cadence: "/ month",
     badge: "Full Power",
-    description: "Uncapped access built for intensive farming operations, cooperatives, and estates.",
+    description: "Uncapped, full-featured access engineered for commercial growers, estates, and cooperatives.",
     features: [
-      { title: "Unlimited AI foliar scans", included: true },
-      { title: "Unlimited library research queries", included: true },
-      { title: "Unlimited Marketplace buy & sell", included: true },
-      { title: "Unlimited Community Forum posts", included: true },
-      { title: "Unlimited Agronomist AI chat", included: true },
-      { title: "Full real-time Dashboard telemetry", included: true },
+      { title: "Unlimited AI foliar crop scans", included: true },
+      { title: "Unlimited Agronomist AI voice & text chats", included: true },
+      { title: "Unlimited Marketplace listings & supplier links", included: true },
+      { title: "Priority Act 36 spray & chemical regimens", included: true },
+      { title: "Dedicated WhatsApp & field tech support", included: true },
+      { title: "Multi-crop enterprise analytics", included: true },
     ],
   },
 ];
@@ -129,8 +132,9 @@ const SA_PROVINCES = [
 
 export function SettingsPage() {
   const { user } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const rawMeta = (user as any)?.user_metadata;
+  const isOwner = user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase();
 
   const initialName =
     rawMeta?.full_name || rawMeta?.display_name || user?.email?.split("@")[0] || "";
@@ -291,7 +295,7 @@ export function SettingsPage() {
         );
       }
 
-      toast.success(t("save_button") + ": Profile & Farm saved successfully!");
+      toast.success("Profile and farm details updated successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to update profile.");
     } finally {
@@ -303,8 +307,8 @@ export function SettingsPage() {
     if (tier.id === "free_plan") {
       toast.info(
         trialCalculation.isTrialCompleted
-          ? "You are currently on the Post-Trial Free Tier."
-          : `Your active trial has ${trialCalculation.daysLeft} days remaining.`
+          ? "You are currently on the Free Community Tier."
+          : `Your complimentary evaluation has ${trialCalculation.daysLeft} days remaining.`
       );
       return;
     }
@@ -313,7 +317,7 @@ export function SettingsPage() {
       import.meta.env["VITE_PAYSTACK_PUBLIC_KEY"] || "pk_test_placeholder_key";
 
     if (!user?.email) {
-      toast.error("User email not found. Please log in again.");
+      toast.error("User account email not detected. Please sign in again.");
       return;
     }
 
@@ -321,7 +325,7 @@ export function SettingsPage() {
 
     try {
       if (typeof window.PaystackPop === "undefined") {
-        throw new Error("Paystack SDK is loading. Please check your connection.");
+        throw new Error("Payment gateway is initializing. Please check your connection.");
       }
 
       const paystack = new window.PaystackPop();
@@ -339,24 +343,24 @@ export function SettingsPage() {
               value: displayName || user.email,
             },
             {
-              display_name: "Farm / Enterprise",
+              display_name: "Farm Enterprise",
               variable_name: "farm_name",
-              value: farmName || "Not provided",
+              value: farmName || "Independent Producer",
             },
             {
-              display_name: "Language",
+              display_name: "Selected Language",
               variable_name: "language",
               value: language,
             },
             {
-              display_name: "Selected Plan",
+              display_name: "Subscription Tier",
               variable_name: "plan_tier",
               value: tier.name,
             },
           ],
         },
         onSuccess: async (transaction: { reference: string }) => {
-          toast.success(`Payment verified! Welcome to ${tier.name}`);
+          toast.success(`Payment verified successfully! Welcome to ${tier.name}`);
           setCurrentPlan(tier.id);
 
           await supabase.auth.updateUser({
@@ -371,16 +375,16 @@ export function SettingsPage() {
         },
         onCancel: () => {
           setProcessingPayment(null);
-          toast.info("Payment cancelled.");
+          toast.info("Payment checkout cancelled.");
         },
         onError: (err: any) => {
           setProcessingPayment(null);
-          toast.error(err?.message || "Transaction failed. Please try again.");
+          toast.error(err?.message || "Payment transaction could not be processed.");
         },
       });
     } catch (err: any) {
       setProcessingPayment(null);
-      toast.error(err.message || "Could not launch Paystack checkout.");
+      toast.error(err.message || "Unable to launch checkout window.");
     }
   };
 
@@ -389,189 +393,24 @@ export function SettingsPage() {
       {/* Page Header */}
       <div>
         <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5" /> {t("account_center")}
+          <Sparkles className="h-3.5 w-3.5" /> Farmer Account &amp; Preferences
         </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
-          {t("settings_title")}
+          Profile &amp; Subscription Settings
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-          {t("settings_subtitle")}
+          Manage your farm details, primary language, visual theme, and active subscription plan.
         </p>
       </div>
 
-      {/* 30-Day Free Trial Tracker */}
-      <div className="rounded-3xl border border-emerald-500/40 bg-white dark:bg-gradient-to-br dark:from-[#131d27] dark:via-[#111922] dark:to-[#0d131a] p-6 sm:p-7 shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
-        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
-                <Clock className="h-3.5 w-3.5" />
-                {currentPlan === "free_trial" || currentPlan === "free_plan"
-                  ? trialCalculation.isTrialCompleted
-                    ? "30-Day Trial Concluded"
-                    : `Day ${trialCalculation.currentDay} of 30`
-                  : t("active_plan")}
-              </span>
-              <span className="text-xs text-slate-600 dark:text-slate-400">
-                {trialCalculation.isTrialCompleted
-                  ? "Free Tier Active (0 scans / month)"
-                  : `${trialCalculation.daysLeft} ${t("days_left")} • Ends ${trialCalculation.formattedExpiry}`}
-              </span>
-            </div>
-
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-2">
-              {currentPlan === "grower_pro"
-                ? "Active Plan: Grower Pro (R100/mo)"
-                : currentPlan === "commercial_unlimited"
-                ? "Active Plan: Commercial Unlimited (R200/mo)"
-                : trialCalculation.isTrialCompleted
-                ? "Post-Trial Free Tier"
-                : `30-Day Full Access Trial: Day ${trialCalculation.currentDay}/30`}
-            </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xl leading-relaxed">
-              {trialCalculation.isTrialCompleted && currentPlan === "free_plan"
-                ? "Your 30-day trial has concluded. You still enjoy unlimited forum discussions, marketplace access, and dashboard telemetry."
-                : "Enjoy all foliar vision diagnostics, pathology research, marketplace trade, and community tools throughout your 30-day evaluation."}
-            </p>
-          </div>
-
-          <div className="shrink-0 text-left sm:text-right">
-            <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
-              {trialCalculation.currentDay} / 30 Days
-            </span>
-            <div className="w-40 sm:w-48 h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden border border-slate-300 dark:border-slate-700/60">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
-                style={{ width: `${trialCalculation.progressPercent}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Subscription Plans: R0, R100, R200 */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Subscription Plans
-          </h2>
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-            Transparent pricing in South African Rand (ZAR). Pay securely via Paystack.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TIERS.map((tier) => {
-            const isCurrent =
-              currentPlan === tier.id ||
-              (tier.id === "free_plan" &&
-                (currentPlan === "free_trial" || !currentPlan));
-            const isProcessing = processingPayment === tier.id;
-
-            return (
-              <div
-                key={tier.id}
-                className={cn(
-                  "rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all relative",
-                  isCurrent
-                    ? "border-emerald-500 bg-white dark:bg-[#16212d] shadow-md dark:shadow-emerald-950/40 ring-1 ring-emerald-500"
-                    : "border-slate-200 bg-white dark:border-slate-800 dark:bg-[#131922] hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
-                )}
-              >
-                {tier.badge && (
-                  <span className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md">
-                    {tier.badge}
-                  </span>
-                )}
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{tier.name}</h3>
-                    {isCurrent && (
-                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
-                        <CheckCircle2 className="h-3 w-3" /> {t("active_plan")}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                      R{tier.priceZAR}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      {tier.cadence}
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                    {tier.description}
-                  </p>
-
-                  <div className="my-4 border-t border-slate-100 dark:border-slate-800/80" />
-
-                  <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
-                    {tier.features.map((feat, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        {feat.included ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                        ) : (
-                          <XCircle className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
-                        )}
-                        <span
-                          className={cn(
-                            "text-[11px] leading-snug",
-                            !feat.included && "text-slate-400 dark:text-slate-500 line-through"
-                          )}
-                        >
-                          {feat.title}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="mt-6 pt-2">
-                  <button
-                    type="button"
-                    disabled={isCurrent || Boolean(processingPayment)}
-                    onClick={() => handleUpgradePlan(tier)}
-                    className={cn(
-                      "w-full py-2.5 px-4 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
-                      isCurrent
-                        ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 cursor-default"
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-md"
-                    )}
-                  >
-                    {isProcessing ? (
-                      <>
-                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span>Opening Paystack...</span>
-                      </>
-                    ) : isCurrent ? (
-                      t("active_plan")
-                    ) : (
-                      <>
-                        <Zap className="h-3.5 w-3.5" /> {t("upgrade_btn")} {tier.name}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Account Info Form */}
+      {/* 1. Account & Farm Information Form */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 shadow-sm dark:shadow-xl space-y-6 transition-colors">
         <div>
           <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-            <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> {t("farm_profile")}
+            <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Grower &amp; Farm Identity
           </h2>
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-            {t("farm_profile_desc")}
+            Update your contact credentials, farm location, and preferred agricultural language.
           </p>
         </div>
 
@@ -579,7 +418,7 @@ export function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5">
-                {t("full_name")}
+                Full Name
               </label>
               <input
                 type="text"
@@ -593,13 +432,13 @@ export function SettingsPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1.5">
-                <Tractor className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> {t("farm_name")}
+                <Tractor className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Farm or Business Name
               </label>
               <input
                 type="text"
                 value={farmName}
                 onChange={(e) => setFarmName(e.target.value)}
-                placeholder="e.g. BlueSky AgriTech Farms / Khumalo Family Estate"
+                placeholder="e.g. Highveld Agri Cooperative"
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none transition shadow-inner"
               />
             </div>
@@ -608,7 +447,7 @@ export function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1">
-                <Phone className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> {t("phone_number")}
+                <Phone className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Phone Number
               </label>
               <input
                 type="tel"
@@ -621,7 +460,7 @@ export function SettingsPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> {t("province")}
+                <MapPin className="h-3 w-3 text-emerald-600 dark:text-emerald-400" /> Production Province
               </label>
               <select
                 value={primaryProvince}
@@ -640,7 +479,7 @@ export function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1.5 flex items-center justify-between">
-                <span>Email Address</span>
+                <span>Account Email</span>
                 <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">Primary Login (Locked)</span>
               </label>
               <div className="relative">
@@ -656,12 +495,14 @@ export function SettingsPage() {
 
             <div>
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1.5 flex items-center gap-1.5">
-                <Languages className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                {t("language_select")}
+                <Languages className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Official Agricultural Language
               </label>
               <select
                 value={language}
-                onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+                onChange={(e) => {
+                  const val = e.target.value as LanguageCode;
+                  setLanguage(val);
+                }}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
               >
                 {SA_LANGUAGES.map((lang) => (
@@ -680,15 +521,15 @@ export function SettingsPage() {
               className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 px-5 text-xs font-bold text-white transition active:scale-95 disabled:opacity-50 shadow-md"
             >
               <Save className="h-3.5 w-3.5" />
-              <span>{savingProfile ? t("saving") : t("save_button")}</span>
+              <span>{savingProfile ? "Saving Details..." : "Save Profile Details"}</span>
             </button>
           </div>
         </form>
       </div>
 
-      {/* Interface Theme Switcher (Dark, Light, System Default) */}
+      {/* 2. Theme & Display Customization */}
       <div className="rounded-3xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-[#161d26]/90 p-6 sm:p-8 shadow-sm dark:shadow-xl transition-colors">
-        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1 flex items-center gap-2">
           {themeMode === "dark" ? (
             <Moon className="h-4 w-4 text-emerald-500" />
           ) : themeMode === "light" ? (
@@ -696,10 +537,10 @@ export function SettingsPage() {
           ) : (
             <Laptop className="h-4 w-4 text-teal-500" />
           )}
-          {t("theme_title")}
+          Display Theme &amp; Atmosphere
         </h2>
         <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">
-          {t("theme_subtitle")}
+          Choose between high-contrast field daylight mode or comfortable low-glare dark mode.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -715,9 +556,9 @@ export function SettingsPage() {
             )}
           >
             <Moon className="h-6 w-6 text-emerald-400 mb-2" />
-            <span className="text-xs font-bold text-slate-900 dark:text-white">{t("dark_mode")}</span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">Blackboard Dark</span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {t("dark_desc")}
+              Low-light night mode with reduced eye strain
             </span>
           </button>
 
@@ -733,9 +574,9 @@ export function SettingsPage() {
             )}
           >
             <Sun className="h-6 w-6 text-amber-500 mb-2" />
-            <span className="text-xs font-bold text-slate-900 dark:text-white">{t("light_mode")}</span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">Daylight Light</span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {t("light_desc")}
+              Crisp daylight contrast optimized for bright sunlight
             </span>
           </button>
 
@@ -751,13 +592,196 @@ export function SettingsPage() {
             )}
           >
             <Laptop className="h-6 w-6 text-teal-500 mb-2" />
-            <span className="text-xs font-bold text-slate-900 dark:text-white">{t("system_mode")}</span>
+            <span className="text-xs font-bold text-slate-900 dark:text-white">System Preference</span>
             <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              {t("system_desc")}
+              Synchronize dynamically with your device settings
             </span>
           </button>
         </div>
       </div>
+
+      {/* 3. Trial Progress & Subscription Hub (Hidden for System Overseer) */}
+      {!isOwner && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Plan &amp; Subscription Billing
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Transparent pricing in South African Rand (ZAR) processed securely via Paystack.
+            </p>
+          </div>
+
+          {/* 30-Day Free Trial Tracker */}
+          <div className="rounded-3xl border border-emerald-500/40 bg-white dark:bg-gradient-to-br dark:from-[#131d27] dark:via-[#111922] dark:to-[#0d131a] p-6 sm:p-7 shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
+            <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40">
+                    <Clock className="h-3.5 w-3.5" />
+                    {currentPlan === "free_trial" || currentPlan === "free_plan"
+                      ? trialCalculation.isTrialCompleted
+                        ? "30-Day Trial Concluded"
+                        : `Evaluation: Day ${trialCalculation.currentDay} of 30`
+                      : "Active Subscription"}
+                  </span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">
+                    {trialCalculation.isTrialCompleted
+                      ? "Free Community Access Active"
+                      : `${trialCalculation.daysLeft} days remaining • Ends ${trialCalculation.formattedExpiry}`}
+                  </span>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-2">
+                  {currentPlan === "grower_pro"
+                    ? "Active Tier: Grower Pro (R100/mo)"
+                    : currentPlan === "commercial_unlimited"
+                    ? "Active Tier: Commercial Unlimited (R200/mo)"
+                    : trialCalculation.isTrialCompleted
+                    ? "Free Community Tier"
+                    : `30-Day Evaluation: Day ${trialCalculation.currentDay} of 30`}
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 max-w-xl leading-relaxed">
+                  {trialCalculation.isTrialCompleted && currentPlan === "free_plan"
+                    ? "Your 30-day evaluation has concluded. You still enjoy full access to community forum discussions, marketplace products, and dashboard telemetry."
+                    : "Enjoy comprehensive access to foliar diagnostic models, plant pathology research, marketplace trade, and community tools throughout your active period."}
+                </p>
+              </div>
+
+              <div className="shrink-0 text-left sm:text-right">
+                <span className="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  {trialCalculation.currentDay} / 30 Days
+                </span>
+                <div className="w-40 sm:w-48 h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1.5 overflow-hidden border border-slate-300 dark:border-slate-700/60">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
+                    style={{ width: `${trialCalculation.progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier Cards (R0, R100, R200) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {TIERS.map((tier) => {
+              const isCurrent =
+                currentPlan === tier.id ||
+                (tier.id === "free_plan" &&
+                  (currentPlan === "free_trial" || !currentPlan));
+              const isProcessing = processingPayment === tier.id;
+
+              return (
+                <div
+                  key={tier.id}
+                  className={cn(
+                    "rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all relative",
+                    isCurrent
+                      ? "border-emerald-500 bg-white dark:bg-[#16212d] shadow-md dark:shadow-emerald-950/40 ring-1 ring-emerald-500"
+                      : "border-slate-200 bg-white dark:border-slate-800 dark:bg-[#131922] hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
+                  )}
+                >
+                  {tier.badge && (
+                    <span className="absolute -top-2.5 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md">
+                      {tier.badge}
+                    </span>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-sm text-slate-900 dark:text-white">{tier.name}</h3>
+                      {isCurrent && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="h-3 w-3" /> Active Plan
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                        R{tier.priceZAR}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        {tier.cadence}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                      {tier.description}
+                    </p>
+
+                    <div className="my-4 border-t border-slate-100 dark:border-slate-800/80" />
+
+                    <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
+                      {tier.features.map((feat, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          {feat.included ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0 mt-0.5" />
+                          )}
+                          <span
+                            className={cn(
+                              "text-[11px] leading-snug",
+                              !feat.included && "text-slate-400 dark:text-slate-500 line-through"
+                            )}
+                          >
+                            {feat.title}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-6 pt-2">
+                    <button
+                      type="button"
+                      disabled={isCurrent || Boolean(processingPayment)}
+                      onClick={() => handleUpgradePlan(tier)}
+                      className={cn(
+                        "w-full py-2.5 px-4 rounded-xl text-xs font-bold transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50",
+                        isCurrent
+                          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 cursor-default"
+                          : "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-md"
+                      )}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span>Opening Paystack...</span>
+                        </>
+                      ) : isCurrent ? (
+                        "Current Plan"
+                      ) : (
+                        <>
+                          <Zap className="h-3.5 w-3.5" /> Upgrade to {tier.name}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* System Overseer Privilege Card */}
+      {isOwner && (
+        <div className="rounded-3xl border border-emerald-500/40 bg-emerald-950/20 dark:bg-emerald-950/30 p-6 sm:p-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-widest bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <ShieldAlert className="h-3 w-3" /> System Overseer Access
+            </span>
+            <h3 className="text-base font-bold text-white mt-1">Infrastructure Authority Active</h3>
+            <p className="text-xs text-slate-400 max-w-xl">
+              Commercial Tier Equivalency (R200/mo) is locked via database definer policies. Consumer metering and trial restrictions are globally bypassed.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
