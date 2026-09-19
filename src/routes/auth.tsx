@@ -14,6 +14,7 @@ import {
   Lock,
   LayoutDashboard,
   AppWindow,
+  MailCheck,
 } from "lucide-react";
 
 import logoImg from "@/assets/BlueSky_AgrITech_Logo.png";
@@ -50,13 +51,14 @@ const credentials = z.object({
 });
 
 function AuthPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [showPortalChoice, setShowPortalChoice] = useState(false);
+  const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { session, loading } = useAuth();
@@ -67,14 +69,14 @@ function AuthPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && session) {
+    if (!loading && session && mode !== "forgot") {
       if (session.user.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
         setShowPortalChoice(true);
       } else {
         navigate({ to: "/app", replace: true });
       }
     }
-  }, [loading, session, navigate]);
+  }, [loading, session, navigate, mode]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -117,6 +119,7 @@ function AuthPage() {
               agreement_accepted_at: acceptanceTimestamp,
               agreement_accepted: true,
             },
+            emailRedirectTo: `${window.location.origin}/auth`,
           },
         });
 
@@ -150,9 +153,12 @@ function AuthPage() {
           );
         }
 
-        toast.success("Account created successfully! Welcome to BlueSky.");
-
-        if (data.session) {
+        if (!data.session) {
+          // Email confirmation is required / waiting for confirmation
+          setSignupConfirmationSent(true);
+          toast.success("Confirmation email sent! Please check your inbox.");
+        } else {
+          toast.success("Account created successfully! Welcome to BlueSky.");
           if (parsed.data.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
             setShowPortalChoice(true);
           } else {
@@ -166,6 +172,7 @@ function AuthPage() {
         });
         if (error) throw error;
 
+        toast.success("Signed in successfully!");
         if (data.user?.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
           setShowPortalChoice(true);
         } else {
@@ -174,6 +181,27 @@ function AuthPage() {
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleForgotPassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (!email.trim() || !email.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+      if (error) throw error;
+      toast.success("Password reset instructions sent to your email!");
+      setMode("signin");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset email");
     } finally {
       setBusy(false);
     }
@@ -276,225 +304,313 @@ function AuthPage() {
               </div>
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white">
-              {mode === "signin" ? "Sign In to BlueSky" : "Create your Account"}
+              {mode === "signin"
+                ? "Sign In to BlueSky"
+                : mode === "forgot"
+                ? "Reset Your Password"
+                : "Create your Account"}
             </h2>
             <p className="mt-0.5 text-xs text-slate-400">
               {mode === "signin"
                 ? "Enter your details to access the AI diagnostics portal"
+                : mode === "forgot"
+                ? "Enter your email address to receive password restart instructions"
                 : "Join the BlueSky precision agriculture network"}
             </p>
           </div>
 
           {/* Blackboard Form Box */}
           <div className="rounded-3xl border border-slate-700/60 bg-[#161d26]/90 p-6 sm:p-9 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === "signup" && (
+            {signupConfirmationSent ? (
+              <div className="text-center space-y-4 py-4">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <MailCheck className="h-7 w-7" />
+                </div>
+                <h3 className="text-lg font-bold text-white">Check Your Email</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  We've sent a confirmation link to <span className="text-emerald-400 font-mono">{email}</span>. Please click the link to confirm your account before signing in.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupConfirmationSent(false);
+                    setMode("signin");
+                  }}
+                  className="mt-4 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition cursor-pointer"
+                >
+                  Return to Sign In
+                </button>
+              </div>
+            ) : mode === "forgot" ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
                   <div className="relative">
                     <input
-                      id="displayName"
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
+                      id="forgot-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder=" "
-                      maxLength={60}
-                      autoComplete="name"
+                      autoComplete="email"
+                      required
                       className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <label
-                      htmlFor="displayName"
+                      htmlFor="forgot-email"
                       className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
                     >
-                      What is your full name?
+                      Enter your account email address
                     </label>
                   </div>
-                  {errors["displayName"] && (
-                    <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["displayName"]}</p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
+                >
+                  {busy ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <span>Send Reset Instructions</span>
                   )}
-                </div>
-              )}
+                </button>
 
-              {/* Email */}
-              <div>
-                <div className="relative">
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder=" "
-                    autoComplete="email"
-                    required
-                    className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                  <label
-                    htmlFor="email"
-                    className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode("signin")}
+                    className="text-xs text-slate-400 hover:text-white transition cursor-pointer"
                   >
-                    What is your email address?
-                  </label>
+                    &larr; Back to sign in
+                  </button>
                 </div>
-                {errors["email"] && (
-                  <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["email"]}</p>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === "signup" && (
+                  <div>
+                    <div className="relative">
+                      <input
+                        id="displayName"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder=" "
+                        maxLength={60}
+                        autoComplete="name"
+                        className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <label
+                        htmlFor="displayName"
+                        className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+                      >
+                        What is your full name?
+                      </label>
+                    </div>
+                    {errors["displayName"] && (
+                      <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["displayName"]}</p>
+                    )}
+                  </div>
                 )}
-              </div>
 
-              {/* Password */}
-              <div>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder=" "
-                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    required
-                    className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                  <label
-                    htmlFor="password"
-                    className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
-                  >
-                    {mode === "signup" ? "Create a secure password (8+ chars)" : "Enter your secret password"}
-                  </label>
-                </div>
-                {errors["password"] && (
-                  <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["password"]}</p>
-                )}
-              </div>
-
-              {/* User Agreement Acceptance Checkbox (Signup Only) */}
-              {mode === "signup" && (
-                <div className="pt-1">
-                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                {/* Email */}
+                <div>
+                  <div className="relative">
                     <input
-                      type="checkbox"
-                      checked={agreedToTerms}
-                      onChange={(e) => {
-                        setAgreedToTerms(e.target.checked);
-                        if (e.target.checked && errors["agreement"]) {
-                          setErrors((prev) => {
-                            const copy = { ...prev };
-                            delete copy["agreement"];
-                            return copy;
-                          });
-                        }
-                      }}
-                      className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 transition cursor-pointer shrink-0"
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder=" "
+                      autoComplete="email"
+                      required
+                      className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
-                    <span className="text-[11px] text-slate-300 leading-snug">
-                      I have read and agree to the{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setLegalModalOpen(true);
-                        }}
-                        className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer"
-                      >
-                        User Agreement ({CURRENT_AGREEMENT_VERSION})
-                      </button>
-                      , acknowledging that AI recommendations are decision-support aids and not a replacement for certified agronomic or Act 36 safety advice. View{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setLegalModalOpen(true);
-                        }}
-                        className="text-emerald-400 hover:underline cursor-pointer"
-                      >
-                        Privacy Policy
-                      </button>{" "}
-                      &amp;{" "}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setLegalModalOpen(true);
-                        }}
-                        className="text-emerald-400 hover:underline cursor-pointer"
-                      >
-                        Cookie Policy
-                      </button>
-                      .
-                    </span>
-                  </label>
-                  {errors["agreement"] && (
-                    <p className="mt-1.5 text-xs font-medium text-rose-400">
-                      {errors["agreement"]}
-                    </p>
+                    <label
+                      htmlFor="email"
+                      className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+                    >
+                      What is your email address?
+                    </label>
+                  </div>
+                  {errors["email"] && (
+                    <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["email"]}</p>
                   )}
                 </div>
-              )}
 
-              {/* Action Button */}
-              <button
-                type="submit"
-                disabled={busy}
-                className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
-              >
-                {busy ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <span>{mode === "signin" ? "Sign In" : "Accept & Create Account"}</span>
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </>
+                {/* Password */}
+                <div>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder=" "
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      required
+                      className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <label
+                      htmlFor="password"
+                      className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+                    >
+                      {mode === "signup" ? "Create a secure password (8+ chars)" : "Enter your secret password"}
+                    </label>
+                  </div>
+                  {mode === "signin" && (
+                    <div className="flex justify-end mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setMode("forgot")}
+                        className="text-[11px] text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+                  {errors["password"] && (
+                    <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["password"]}</p>
+                  )}
+                </div>
+
+                {/* User Agreement Acceptance Checkbox (Signup Only) */}
+                {mode === "signup" && (
+                  <div className="pt-1">
+                    <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => {
+                          setAgreedToTerms(e.target.checked);
+                          if (e.target.checked && errors["agreement"]) {
+                            setErrors((prev) => {
+                              const copy = { ...prev };
+                              delete copy["agreement"];
+                              return copy;
+                            });
+                          }
+                        }}
+                        className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 transition cursor-pointer shrink-0"
+                      />
+                      <span className="text-[11px] text-slate-300 leading-snug">
+                        I have read and agree to the{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLegalModalOpen(true);
+                          }}
+                          className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer"
+                        >
+                          User Agreement ({CURRENT_AGREEMENT_VERSION})
+                        </button>
+                        , acknowledging that AI recommendations are decision-support aids and not a replacement for certified agronomic or Act 36 safety advice. View{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLegalModalOpen(true);
+                          }}
+                          className="text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          Privacy Policy
+                        </button>{" "}
+                        &amp;{" "}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setLegalModalOpen(true);
+                          }}
+                          className="text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          Cookie Policy
+                        </button>
+                        .
+                      </span>
+                    </label>
+                    {errors["agreement"] && (
+                      <p className="mt-1.5 text-xs font-medium text-rose-400">
+                        {errors["agreement"]}
+                      </p>
+                    )}
+                  </div>
                 )}
-              </button>
-            </form>
 
-            <div className="my-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-slate-800" />
-              <span className="text-[11px] font-medium tracking-wider uppercase text-slate-500">
-                Quick Access
-              </span>
-              <span className="h-px flex-1 bg-slate-800" />
-            </div>
+                {/* Action Button */}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
+                >
+                  {busy ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <span>{mode === "signin" ? "Sign In" : "Accept & Create Account"}</span>
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
 
-            <button
-              type="button"
-              onClick={handleGoogle}
-              disabled={busy}
-              className="cursor-pointer flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900/50 py-3 px-4 text-xs font-medium text-slate-200 transition hover:bg-slate-800/80 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700 disabled:opacity-60"
-            >
-              <GoogleIcon />
-              Continue with Google Account
-            </button>
+            {!signupConfirmationSent && (
+              <>
+                <div className="my-6 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-slate-800" />
+                  <span className="text-[11px] font-medium tracking-wider uppercase text-slate-500">
+                    Quick Access
+                  </span>
+                  <span className="h-px flex-1 bg-slate-800" />
+                </div>
 
-            {/* Bottom Account Switcher */}
-            <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
-              {mode === "signin" ? (
-                <p className="text-xs text-slate-400">
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("signup");
-                      setErrors({});
-                    }}
-                    className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
-                  >
-                    Create account
-                  </button>
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400">
-                  Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("signin");
-                      setErrors({});
-                    }}
-                    className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
-                  >
-                    Sign in
-                  </button>
-                </p>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={handleGoogle}
+                  disabled={busy}
+                  className="cursor-pointer flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900/50 py-3 px-4 text-xs font-medium text-slate-200 transition hover:bg-slate-800/80 hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-700 disabled:opacity-60"
+                >
+                  <GoogleIcon />
+                  Continue with Google Account
+                </button>
+
+                {/* Bottom Account Switcher */}
+                <div className="mt-6 border-t border-slate-800/80 pt-4 text-center">
+                  {mode === "signin" ? (
+                    <p className="text-xs text-slate-400">
+                      Don't have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("signup");
+                          setErrors({});
+                        }}
+                        className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
+                      >
+                        Create account
+                      </button>
+                    </p>
+                  ) : mode === "signup" ? (
+                    <p className="text-xs text-slate-400">
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("signin");
+                          setErrors({});
+                        }}
+                        className="cursor-pointer font-semibold text-emerald-400 hover:text-emerald-300 hover:underline ml-1"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            )}
           </div>
 
           <p className="mt-6 text-center text-xs text-slate-400">
