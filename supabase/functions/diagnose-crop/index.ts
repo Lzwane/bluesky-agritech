@@ -1,6 +1,5 @@
 // deno-lint-ignore-file
 declare const Deno: any;
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -16,9 +15,6 @@ Deno.serve(async (req: Request) => {
     const { crop, imageBase64, imageMediaType, customPrompt, farmerName, preferredLanguage } = body;
 
     const apiKey = Deno.env.get("GROQ_API_KEY");
-    console.log("--- DIAGNOSE-CROP EDGE FUNCTION INVOKED ---");
-    console.log("API Key Present:", Boolean(apiKey));
-
     const isScanningRequest = Boolean(imageBase64 && !customPrompt?.includes("Conversation History"));
     let aiResultText = "";
 
@@ -35,7 +31,8 @@ Deno.serve(async (req: Request) => {
   "chemical_treatment": ["Act 36 of 1947 registered compounds"],
   "preventative_measures": ["practical field steps"]
 }`
-          : `You are BlueSky AgriTech AI Agronomist, specialized in South African crops, soil health, and Act 36 remedies. Reply helpfully in ${preferredLanguage || "English"}. Provide clear, expert-level agronomic guidance.`;
+          : `You are BlueSky AgriTech AI, a helpful, conversational, and knowledgeable AI agronomist and assistant. 
+Respond naturally, helpfully, and concisely to the user's input, just like Gemini or ChatGPT. Keep casual greetings short and friendly (e.g., replying to "hi" with a natural greeting and asking how you can help), and provide structured, accurate advice when asked agricultural questions. Communicate in ${preferredLanguage || "English"}.`;
 
         const userTextContent = isScanningRequest
           ? `Analyze this ${crop || "crop"} leaf specimen. Provide symptoms, organic control, and Act 36 chemical remedies. Return valid JSON only.`
@@ -62,12 +59,9 @@ Deno.serve(async (req: Request) => {
           messages.push({ role: "user", content: userTextContent });
         }
 
-        // Use active Groq-hosted open weights model IDs
         const selectedModel = (isScanningRequest && imageBase64) 
           ? "llama-3.2-90b-vision-preview" 
           : "openai/gpt-oss-120b";
-        
-        console.log("Selected Groq Model:", selectedModel);
 
         const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
@@ -78,27 +72,19 @@ Deno.serve(async (req: Request) => {
           body: JSON.stringify({
             model: selectedModel,
             messages: messages,
-            temperature: 0.3,
+            temperature: 0.6,
             max_tokens: 1500,
             ...(isScanningRequest ? { response_format: { type: "json_object" } } : {})
           }),
         });
 
-        console.log("Groq API Response Status:", res.status);
-
         if (res.ok) {
           const resData = await res.json();
           aiResultText = resData.choices?.[0]?.message?.content || "";
-          console.log("Groq Success Output Length:", aiResultText.length);
-        } else {
-          const errBody = await res.text();
-          console.error("GROQ_API_ERROR_BODY:", errBody);
         }
       } catch (err) {
         console.error("GROQ_FETCH_CATCH_ERROR:", err);
       }
-    } else {
-      console.warn("WARNING: GROQ_API_KEY environment secret is missing in Supabase!");
     }
 
     if (isScanningRequest) {
@@ -109,9 +95,7 @@ Deno.serve(async (req: Request) => {
           .replace(/```/g, "")
           .trim();
         parsedJson = JSON.parse(clean);
-      } catch (parseErr) {
-        console.error("Scan JSON Parse Error:", parseErr);
-      }
+      } catch (_) {}
 
       if (!parsedJson) {
         parsedJson = {
@@ -134,9 +118,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Direct, natural response fallback without rigid onboarding blocks
     const finalChatResponse =
       aiResultText ||
-      `Hello ${farmerName || "Farmer"}!\n\nI can help guide your field operations. Tell me what crop you are tending, what symptoms or pests you observe, or ask any soil and irrigation questions!`;
+      "Hello! I'm your AI assistant. How can I help you today?";
 
     return new Response(
       JSON.stringify({
@@ -147,10 +132,9 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    console.error("TOP_LEVEL_EDGE_FUNCTION_ERROR:", err.message);
     return new Response(
       JSON.stringify({
-        response: "To help you best, let me know what crop you are growing or describe what you notice on the leaves, and I will guide you step by step.",
+        response: "Hi there! What can I help you with?",
         disease_name: "Scan Processed",
         confidence: 85,
         symptoms: ["General foliar observation"],
