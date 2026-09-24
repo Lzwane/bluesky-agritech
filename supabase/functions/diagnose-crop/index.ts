@@ -13,43 +13,19 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { crop, imageBase64, imageMediaType, customPrompt, farmerName } = body;
+    const { crop, imageBase64, imageMediaType, customPrompt, farmerName, preferredLanguage } = body;
 
-    const apiKey =
-      Deno.env.get("ANTHROPIC_API_KEY") ||
-      Deno.env.get("VITE_ANTHROPIC_API_KEY");
+    const apiKey = Deno.env.get("GROQ_API_KEY");
+    console.log("--- DIAGNOSE-CROP EDGE FUNCTION INVOKED ---");
+    console.log("API Key Present:", Boolean(apiKey));
 
-    // Check if this request came from the leaf scanner or from the chat advisor
     const isScanningRequest = Boolean(imageBase64 && !customPrompt?.includes("Conversation History"));
-
-    // Supported active models in your workspace console
-    const candidateModels = [
-      "claude-haiku-4-5",
-      "claude-sonnet-5",
-      "claude-3-5-sonnet-latest",
-      "claude-3-haiku-20240307",
-    ];
-
     let aiResultText = "";
 
     if (apiKey) {
-      for (const modelName of candidateModels) {
-        try {
-          const contentParts: any[] = [];
-          if (imageBase64) {
-            contentParts.push({
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: imageMediaType || "image/jpeg",
-                data: imageBase64,
-              },
-            });
-          }
-
-          const promptText = isScanningRequest
-            ? `You are an expert plant pathologist for Southern African agriculture.
-Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
+      try {
+        const systemPrompt = isScanningRequest
+          ? `You are an expert plant pathologist for Southern African agriculture. Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
 {
   "disease_name": "Identified disease or Healthy",
   "confidence": 92,
@@ -59,39 +35,72 @@ Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
   "chemical_treatment": ["Act 36 of 1947 registered compounds"],
   "preventative_measures": ["practical field steps"]
 }`
-            : (customPrompt || `Farmer ${farmerName || "Farmer"} asks: How do I manage my ${crop || "crops"}?`);
+          : `You are BlueSky AgriTech AI Agronomist, specialized in South African crops, soil health, and Act 36 remedies. Reply helpfully in ${preferredLanguage || "English"}. Provide clear, expert-level agronomic guidance.`;
 
-          contentParts.push({ type: "text", text: promptText });
+        const userTextContent = isScanningRequest
+          ? `Analyze this ${crop || "crop"} leaf specimen. Provide symptoms, organic control, and Act 36 chemical remedies. Return valid JSON only.`
+          : (customPrompt || `Farmer ${farmerName || "Farmer"} asks: How do I manage my ${crop || "crops"}?`);
 
-          const res = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "x-api-key": apiKey.trim(),
-              "anthropic-version": "2023-06-01",
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({
-              model: modelName,
-              max_tokens: 1500,
-              messages: [{ role: "user", content: contentParts }],
-            }),
+        const messages: any[] = [
+          { role: "system", content: systemPrompt }
+        ];
+
+        if (isScanningRequest && imageBase64) {
+          messages.push({
+            role: "user",
+            content: [
+              { type: "text", text: userTextContent },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${imageMediaType || "image/jpeg"};base64,${imageBase64}`
+                }
+              }
+            ]
           });
-
-          if (res.ok) {
-            const resData = await res.json();
-            aiResultText = resData.content
-              ?.filter((c: any) => c.type === "text")
-              ?.map((c: any) => c.text)
-              ?.join("\n\n");
-            if (aiResultText) break;
-          }
-        } catch (_) {
-          // Attempt next candidate model
+        } else {
+          messages.push({ role: "user", content: userTextContent });
         }
+
+        // Use active Groq-hosted open weights model IDs
+        const selectedModel = (isScanningRequest && imageBase64) 
+          ? "llama-3.2-90b-vision-preview" 
+          : "openai/gpt-oss-120b";
+        
+        console.log("Selected Groq Model:", selectedModel);
+
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey.trim()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: selectedModel,
+            messages: messages,
+            temperature: 0.3,
+            max_tokens: 1500,
+            ...(isScanningRequest ? { response_format: { type: "json_object" } } : {})
+          }),
+        });
+
+        console.log("Groq API Response Status:", res.status);
+
+        if (res.ok) {
+          const resData = await res.json();
+          aiResultText = resData.choices?.[0]?.message?.content || "";
+          console.log("Groq Success Output Length:", aiResultText.length);
+        } else {
+          const errBody = await res.text();
+          console.error("GROQ_API_ERROR_BODY:", errBody);
+        }
+      } catch (err) {
+        console.error("GROQ_FETCH_CATCH_ERROR:", err);
       }
+    } else {
+      console.warn("WARNING: GROQ_API_KEY environment secret is missing in Supabase!");
     }
 
-    // Return structured payload if scanner requested it
     if (isScanningRequest) {
       let parsedJson: any = null;
       try {
@@ -100,10 +109,11 @@ Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
           .replace(/```/g, "")
           .trim();
         parsedJson = JSON.parse(clean);
-      } catch (_) {}
+      } catch (parseErr) {
+        console.error("Scan JSON Parse Error:", parseErr);
+      }
 
       if (!parsedJson) {
-        // Safe structured fallback so the Diagnosis scanning UI never breaks
         parsedJson = {
           disease_name: "Foliar Examination Complete",
           confidence: 88,
@@ -124,7 +134,6 @@ Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
       );
     }
 
-    // Return conversational payload for the Advisor page
     const finalChatResponse =
       aiResultText ||
       `Hello ${farmerName || "Farmer"}!\n\nI can help guide your field operations. Tell me what crop you are tending, what symptoms or pests you observe, or ask any soil and irrigation questions!`;
@@ -138,6 +147,7 @@ Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
+    console.error("TOP_LEVEL_EDGE_FUNCTION_ERROR:", err.message);
     return new Response(
       JSON.stringify({
         response: "To help you best, let me know what crop you are growing or describe what you notice on the leaves, and I will guide you step by step.",
