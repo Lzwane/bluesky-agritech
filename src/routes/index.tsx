@@ -13,8 +13,10 @@ import {
   Sparkles,
   TrendingDown,
   WifiOff,
-  ShieldAlert,
-  FileText,
+  MapPin,
+  Phone,
+  Mail,
+  Menu,
   X,
 } from "lucide-react";
 
@@ -31,12 +33,6 @@ export const Route = createFileRoute("/")({
         name: "description",
         content:
           "Snap a photo, get an instant AI diagnosis of crop pests, diseases and nutrient deficiencies — with organic and chemical treatment plans in all 11 South African languages.",
-      },
-      { property: "og:title", content: "AI Crop Detective — Instant Crop Diagnosis" },
-      {
-        property: "og:description",
-        content:
-          "AI-powered crop diagnostics, a disease library, verified input marketplace and farm advisor built for South African farmers.",
       },
     ],
   }),
@@ -170,48 +166,40 @@ const plans = [
 ];
 
 function Index() {
-  const [agreementModalOpen, setAgreementModalOpen] = useState(false);
-  const [modalTab, setModalTab] = useState<"agreement" | "privacy" | "cookies">("agreement");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
 
-  const openLegalModal = (tab: "agreement" | "privacy" | "cookies") => {
-    setModalTab(tab);
-    setAgreementModalOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-background font-sans">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3.5 lg:px-6">
           <Logo />
+
+          {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
             <a href="#how" className="text-muted-foreground transition-colors hover:text-foreground">
               How it works
             </a>
-            <a
-              href="#features"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <a href="#features" className="text-muted-foreground transition-colors hover:text-foreground">
               Features
             </a>
-            <a
-              href="#pricing"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
+            <a href="#pricing" className="text-muted-foreground transition-colors hover:text-foreground">
               Pricing
             </a>
-            <Link
-              to="/library"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Library
+            <Link to="/about" className="text-muted-foreground transition-colors hover:text-foreground">
+              About Us
+            </Link>
+            <Link to="/contact" className="text-muted-foreground transition-colors hover:text-foreground">
+              Contact Us
             </Link>
           </nav>
-          <div className="flex items-center gap-2">
+
+          {/* Desktop Right Buttons */}
+          <div className="hidden md:flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
               <Link to="/auth">Sign in</Link>
             </Button>
@@ -219,7 +207,68 @@ function Index() {
               <Link to="/auth">Get started</Link>
             </Button>
           </div>
+
+          {/* Mobile Menu Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="md:hidden p-2 rounded-xl border border-border bg-card text-foreground hover:bg-secondary transition cursor-pointer"
+            aria-label="Toggle Navigation"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
+
+        {/* Mobile Dropdown Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-b border-border bg-background px-4 py-4 space-y-3 shadow-xl animate-in slide-in-from-top-2 duration-150">
+            <nav className="flex flex-col space-y-2 text-sm font-medium">
+              <a
+                href="#how"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-secondary transition"
+              >
+                How it works
+              </a>
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-secondary transition"
+              >
+                Features
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-secondary transition"
+              >
+                Pricing
+              </a>
+              <Link
+                to="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-secondary transition text-emerald-600 font-semibold"
+              >
+                About Us
+              </Link>
+              <Link
+                to="/contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 rounded-xl hover:bg-secondary transition"
+              >
+                Contact Us
+              </Link>
+            </nav>
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
+              <Button asChild variant="outline" size="sm" className="w-full justify-center">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+              <Button asChild size="sm" className="w-full justify-center">
+                <Link to="/auth">Get started</Link>
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       <main>
@@ -251,7 +300,7 @@ function Index() {
                   <Link to="/auth">Diagnose a crop free</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
-                  <Link to="/library">Browse the library</Link>
+                  <Link to="/about">Learn more about us</Link>
                 </Button>
               </div>
               <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
@@ -261,9 +310,7 @@ function Index() {
                   ["<10s", "Average scan"],
                 ].map(([value, label]) => (
                   <div key={label}>
-                    <dt className="font-display text-2xl font-extrabold text-foreground">
-                      {value}
-                    </dt>
+                    <dt className="font-display text-2xl font-extrabold text-foreground">{value}</dt>
                     <dd className="text-xs font-medium text-muted-foreground">{label}</dd>
                   </div>
                 ))}
@@ -311,10 +358,7 @@ function Index() {
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
               {steps.map((step, index) => (
-                <div
-                  key={step.title}
-                  className="rounded-2xl border border-border/70 bg-card p-6 shadow-card"
-                >
+                <div key={step.title} className="rounded-2xl border border-border/70 bg-card p-6 shadow-card">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                       <step.icon className="h-5 w-5" />
@@ -403,11 +447,7 @@ function Index() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      asChild
-                      className="mt-8 w-full"
-                      variant={plan.featured ? "default" : "outline"}
-                    >
+                    <Button asChild className="mt-8 w-full" variant={plan.featured ? "default" : "outline"}>
                       <Link to="/auth">{plan.cta}</Link>
                     </Button>
                   </CardContent>
@@ -417,196 +457,74 @@ function Index() {
           </div>
         </section>
 
-        {/* High-Contrast Bottom CTA Banner with Cool Grey Canvas & Black Text */}
-        <section className="border-t border-slate-200 bg-slate-100/90 py-20 text-slate-950 relative overflow-hidden shadow-inner">
-          <div className="absolute top-0 right-10 h-72 w-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="mx-auto flex w-full max-w-7xl flex-col items-start gap-6 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-6 relative z-10">
-            <div className="max-w-xl">
-              <h2 className="font-display text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
-                Your next scan could save your season.
+        {/* Contact Us Section */}
+        <section id="contact" className="border-t border-border bg-secondary/20 py-20">
+          <div className="mx-auto w-full max-w-7xl px-4 lg:px-6">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+                Get in touch with BlueSky AgriTech
               </h2>
-              <p className="mt-3 text-sm sm:text-base font-medium text-slate-700 leading-relaxed">
-                Create a free account and diagnose your first crop photo in under a minute.
+              <p className="mt-4 text-muted-foreground">
+                Have questions about our AI diagnostics, commercial contracts, or platform support? Reach out to us directly.
               </p>
             </div>
-            <Button
-              asChild
-              size="lg"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-950/20 active:scale-95 px-8 py-6 rounded-2xl cursor-pointer"
-            >
-              <Link to="/auth">Get started free</Link>
-            </Button>
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 rounded-3xl border border-border bg-card shadow-sm flex items-start gap-4">
+                <MapPin className="h-6 w-6 text-emerald-600 shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-bold text-sm">Operating Venue</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Johannesburg &amp; Pretoria, Gauteng, South Africa</p>
+                </div>
+              </div>
+              <div className="p-6 rounded-3xl border border-border bg-card shadow-sm flex items-start gap-4">
+                <Phone className="h-6 w-6 text-emerald-600 shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-bold text-sm">Telephone / WhatsApp</h3>
+                  <p className="text-xs text-muted-foreground mt-1">+27 76 104 7696</p>
+                </div>
+              </div>
+              <div className="p-6 rounded-3xl border border-border bg-card shadow-sm flex items-start gap-4">
+                <Mail className="h-6 w-6 text-emerald-600 shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-bold text-sm">Support Email</h3>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">mnisithokozani829@gmail.com</p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Footer with clean, standard legal links */}
+      {/* Footer */}
       <footer className="border-t border-border bg-card py-12">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 text-sm text-muted-foreground lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <Logo />
           <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm">
-            <Link to="/library" className="hover:text-foreground transition">
-              Library
+            <Link to="/about" className="hover:text-foreground transition font-medium">
+              About Us
             </Link>
-            <a href="#pricing" className="hover:text-foreground transition">
-              Pricing
+            <a href="#contact" className="hover:text-foreground transition font-medium">
+              Contact Us
             </a>
-            <button
-              type="button"
-              onClick={() => openLegalModal("agreement")}
-              className="hover:text-foreground transition cursor-pointer text-left font-medium"
-            >
+            <Link to="/terms" className="hover:text-foreground transition font-medium">
               User Agreement
-            </button>
-            <button
-              type="button"
-              onClick={() => openLegalModal("privacy")}
-              className="hover:text-foreground transition cursor-pointer text-left font-medium"
-            >
+            </Link>
+            <Link to="/privacy" className="hover:text-foreground transition font-medium">
               Privacy Policy
-            </button>
-            <button
-              type="button"
-              onClick={() => openLegalModal("cookies")}
-              className="hover:text-foreground transition cursor-pointer text-left font-medium"
-            >
+            </Link>
+            <Link to="/cookies" className="hover:text-foreground transition font-medium">
               Cookie Policy
-            </button>
+            </Link>
             <Link to="/auth" className="hover:text-foreground transition">
               Sign in
             </Link>
           </nav>
-          <p className="text-xs">
-            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.
-          </p>
-        </div>
-      </footer>
-
-      {/* User Agreement, Privacy Policy, & Cookie Policy Modal */}
-      {agreementModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-2xl text-foreground space-y-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-bold tracking-tight">Legal &amp; User Agreement</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAgreementModalOpen(false)}
-                className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Navigation Tabs */}
-            <div className="flex gap-2 border-b border-border pb-2 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setModalTab("agreement")}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  modalTab === "agreement"
-                    ? "bg-primary text-primary-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                User Agreement (Terms)
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalTab("privacy")}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  modalTab === "privacy"
-                    ? "bg-primary text-primary-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Privacy Policy (POPIA)
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalTab("cookies")}
-                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
-                  modalTab === "cookies"
-                    ? "bg-primary text-primary-foreground font-bold"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Cookie Policy
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="text-xs sm:text-sm text-muted-foreground space-y-4 leading-relaxed">
-              {modalTab === "agreement" && (
-                <>
-                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-300 flex items-start gap-3">
-                    <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-bold text-xs uppercase tracking-wider">
-                        Important Agronomic &amp; Legal Limitation
-                      </h4>
-                      <p className="mt-1 text-xs leading-relaxed">
-                        AI Crop Detective outputs, foliar diagnoses, and AI Agronomist recommendations are provided exclusively as decision-support information. They do not constitute formal, licensed agronomic warranties or replace certified agronomist evaluations. BlueSky AgriTech Pty LTD accepts no financial liability for crop yield shortfalls, phytotoxicity, or misapplication of agrochemicals. All agricultural remedies must strictly comply with the South African Fertilizers, Farm Feeds, Agricultural Remedies and Stock Remedies Act (Act 36 of 1947).
-                      </p>
-                    </div>
-                  </div>
-
-                  <h3 className="font-bold text-foreground text-sm">1. Platform Services &amp; Eligibility</h3>
-                  <p>
-                    By accessing or using the BlueSky AgriTech platform, you represent that you are engaged in agricultural production, research, or commercial enterprise within the Republic of South Africa or Southern Africa and agree to adhere to all terms contained herein (Version v1.2-2026).
-                  </p>
-
-                  <h3 className="font-bold text-foreground text-sm">2. Account Responsibility</h3>
-                  <p>
-                    Users are responsible for maintaining the confidentiality of their account credentials and are fully liable for all activities, marketplace listings, and forum communications conducted under their profile.
-                  </p>
-
-                  <h3 className="font-bold text-foreground text-sm">3. Agrochemical &amp; Spray Application Compliance</h3>
-                  <p>
-                    Any treatment, dosage, or chemical protocol recommended by the AI engine must be independently verified against official product labels registered under Act 36 of 1947 prior to handling, tank-mixing, or spraying. Certified Personal Protective Equipment (PPE) and mandatory pre-harvest withholding periods (PHI) must be strictly enforced by the user.
-                  </p>
-                </>
-              )}
-
-              {modalTab === "privacy" && (
-                <>
-                  <h3 className="font-bold text-foreground text-sm">Protection of Personal Information Act (POPIA) Notice</h3>
-                  <p>
-                    BlueSky AgriTech Pty LTD respects your privacy and is fully committed to compliance with the South African Protection of Personal Information Act (Act 4 of 2013).
-                  </p>
-                  <p>
-                    We collect your full name, farm identity, province, contact information, and crop imagery solely to deliver tailored foliar diagnostics, generate agronomic alerts, and facilitate agricultural commerce. Your telemetry data is never sold to third-party data brokers.
-                  </p>
-                </>
-              )}
-
-              {modalTab === "cookies" && (
-                <>
-                  <h3 className="font-bold text-foreground text-sm">Cookie &amp; Local Storage Policy</h3>
-                  <p>
-                    BlueSky AgriTech utilizes essential browser cookies and local storage tokens (`bluesky_theme_mode`, session authentication tokens, and cached diagnostic registries) to preserve your user preferences and offline-tolerant diagnostic histories.
-                  </p>
-                  <p>
-                    You can manage or disable non-essential cookies via your browser settings; however, disabling local tokens may affect persistent theme preferences and offline history access.
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="pt-2 border-t border-border flex justify-end">
-              <Button
-                type="button"
-                onClick={() => setAgreementModalOpen(false)}
-                className="cursor-pointer"
-              >
-                Close Legal Notice
-              </Button>
-            </div>
+          <div className="text-xs space-y-1">
+            <p>&copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.</p>
+            <p className="text-muted-foreground">Support: mnisithokozani829@gmail.com | +27 76 104 7696</p>
           </div>
         </div>
-      )}
+      </footer>
     </div>
   );
 }

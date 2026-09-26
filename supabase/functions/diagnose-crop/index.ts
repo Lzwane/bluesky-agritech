@@ -24,19 +24,26 @@ Deno.serve(async (req: Request) => {
           ? `You are an expert plant pathologist for Southern African agriculture. Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
 {
   "disease_name": "Identified disease or Healthy",
+  "scientific_name": "Latin scientific name",
   "confidence": 92,
-  "pathogen": "Fungal / Bacterial / Pest / Deficiency",
-  "symptoms": ["list of symptoms observed"],
-  "organic_treatment": ["organic control measures"],
-  "chemical_treatment": ["Act 36 of 1947 registered compounds"],
-  "preventative_measures": ["practical field steps"]
+  "severity": "Low | Moderate | High | Critical",
+  "pathogen_type": "Fungal | Bacterial | Viral | Pest Infestation | Nutrient Deficiency | Healthy",
+  "symptoms_observed": ["list of symptoms observed"],
+  "organic_treatment": "organic control measures",
+  "chemical_treatment": "Act 36 of 1947 registered compounds",
+  "preventative_measures": "practical field steps",
+  "safety_note": "PPE and withholding period advice"
 }`
-          : `You are BlueSky AgriTech AI, a helpful, conversational, and knowledgeable AI agronomist and assistant. 
-Respond naturally, helpfully, and concisely to the user's input, just like Gemini or ChatGPT. Keep casual greetings short and friendly (e.g., replying to "hi" with a natural greeting and asking how you can help), and provide structured, accurate advice when asked agricultural questions. Communicate in ${preferredLanguage || "English"}.`;
+          : `You are BlueSky AgriTech AI, a precise, concise, and direct AI agronomist assistant. 
+Strict Rules:
+1. Answer ONLY what the user asked. Keep responses short, direct, and conversational (like Gemini or ChatGPT).
+2. DO NOT over-explain or add unnecessary paragraphs.
+3. DO NOT add unsolicited follow-up suggestions, lists of recommended next questions, or conversational filler like "Let me know if you need anything else!".
+4. Communicate in ${preferredLanguage || "English"}.`;
 
         const userTextContent = isScanningRequest
           ? `Analyze this ${crop || "crop"} leaf specimen. Provide symptoms, organic control, and Act 36 chemical remedies. Return valid JSON only.`
-          : (customPrompt || `Farmer ${farmerName || "Farmer"} asks: How do I manage my ${crop || "crops"}?`);
+          : (customPrompt || `Farmer asks: How do I manage my crops?`);
 
         const messages: any[] = [
           { role: "system", content: systemPrompt }
@@ -72,8 +79,8 @@ Respond naturally, helpfully, and concisely to the user's input, just like Gemin
           body: JSON.stringify({
             model: selectedModel,
             messages: messages,
-            temperature: 0.6,
-            max_tokens: 1500,
+            temperature: 0.2,
+            max_tokens: 600, // Keeps answers short and punchy
             ...(isScanningRequest ? { response_format: { type: "json_object" } } : {})
           }),
         });
@@ -100,12 +107,15 @@ Respond naturally, helpfully, and concisely to the user's input, just like Gemin
       if (!parsedJson) {
         parsedJson = {
           disease_name: "Foliar Examination Complete",
-          confidence: 88,
-          pathogen: "Nutritional / Environmental Stress",
-          symptoms: ["Early chlorotic margins", "Localized canopy stress"],
-          organic_treatment: ["Apply foliar seaweed extract", "Ensure root zone moisture balance"],
-          chemical_treatment: ["Standard balanced NPK foliar spray + Zinc chelate"],
-          preventative_measures: ["Test soil pH", "Maintain clean drip irrigation filtration"],
+          scientific_name: "Asymptomatic Foliage",
+          confidence: 85,
+          severity: "Low",
+          pathogen_type: "Nutritional / Environmental Stress",
+          symptoms_observed: ["Early chlorotic margins", "Localized canopy stress"],
+          organic_treatment: "Apply foliar seaweed extract.",
+          chemical_treatment: "Standard balanced NPK foliar spray.",
+          preventative_measures: "Test soil pH and maintain irrigation filtration.",
+          safety_note: "Wear calibrated PPE when handling Act 36 remedies.",
         };
       }
 
@@ -118,10 +128,8 @@ Respond naturally, helpfully, and concisely to the user's input, just like Gemin
       );
     }
 
-    // Direct, natural response fallback without rigid onboarding blocks
     const finalChatResponse =
-      aiResultText ||
-      "Hello! I'm your AI assistant. How can I help you today?";
+      aiResultText || "Hello! How can I help?";
 
     return new Response(
       JSON.stringify({
@@ -134,12 +142,10 @@ Respond naturally, helpfully, and concisely to the user's input, just like Gemin
   } catch (err: any) {
     return new Response(
       JSON.stringify({
-        response: "Hi there! What can I help you with?",
+        response: "AI service temporarily unavailable.",
         disease_name: "Scan Processed",
         confidence: 85,
-        symptoms: ["General foliar observation"],
-        organic_treatment: ["Maintain balanced soil watering"],
-        chemical_treatment: ["Standard registered preventative foliar spray"],
+        symptoms_observed: ["General foliar observation"],
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

@@ -15,6 +15,8 @@ import {
   ChevronRight,
   X,
   Scan,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +30,7 @@ export const Route = createFileRoute("/_authenticated/app/diagnosis")({
 });
 
 interface DiagnosticReport {
+  requestId?: string;
   crop: string;
   disease_name: string;
   scientific_name: string;
@@ -49,6 +52,7 @@ interface DiagnosticReport {
 
 interface StoredScanRecord {
   id: string;
+  request_id?: string;
   created_at: string;
   crop: string;
   disease_name: string;
@@ -76,15 +80,15 @@ const COMMON_CROPS = [
 ];
 
 const SCAN_TELEMETRY_STEPS = [
+  "Generating unique request signature...",
   "Calibrating foliar spectrum...",
   "Isolating lesion contours...",
-  "Cross-referencing pathogen libraries...",
-  "Synthesizing biocontrol protocols...",
+  "Cross-referencing Act 36 pathogen libraries...",
 ];
 
 export function DiagnosisPage() {
   const { user } = useAuth();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { checkLimit, isOwner, currentTier } = useTierAccess();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -96,6 +100,8 @@ export function DiagnosisPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [report, setReport] = useState<DiagnosticReport | null>(null);
 
+  // Protection against double-clicking and duplicate submissions
+  const isSubmittingRef = useRef<boolean>(false);
   const [telemetryIndex, setTelemetryIndex] = useState(0);
 
   const [historyList, setHistoryList] = useState<StoredScanRecord[]>([]);
@@ -240,6 +246,7 @@ export function DiagnosisPage() {
     }
 
     return {
+      requestId: parsed?.requestId,
       crop: parsed?.crop || selectedCrop,
       disease_name: diseaseName,
       scientific_name: scientificName,
@@ -267,6 +274,12 @@ export function DiagnosisPage() {
   };
 
   const handleRunDiagnosis = async () => {
+    // 1. Guard against double-clicking and duplicate submissions
+    if (isSubmittingRef.current || analyzing) {
+      console.warn("[Client Guard] Duplicate submission blocked.");
+      return;
+    }
+
     const quotaCheck = await checkLimit("diagnosis");
     if (!quotaCheck.allowed) {
       return;
@@ -277,12 +290,19 @@ export function DiagnosisPage() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setAnalyzing(true);
     setReport(null);
 
+    // 2. Generate a unique request ID for tracking this exact submission payload
+    const uniqueRequestId = `diag-req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    console.log(`[Client] Initiating single diagnosis scan. Request ID: ${uniqueRequestId}`);
+
     try {
+      // 3. Single Supabase Edge Function invocation (Guaranteed 1 request per scan)
       const response = await supabase.functions.invoke("diagnose-crop", {
         body: {
+          requestId: uniqueRequestId,
           imageBase64,
           imageMediaType,
           crop: selectedCrop,
@@ -302,12 +322,14 @@ export function DiagnosisPage() {
       }
 
       const reportData: DiagnosticReport = extractDiagnosticReport(response.data);
+      reportData.requestId = uniqueRequestId;
       setReport(reportData);
       toast.success("Crop diagnosis generated successfully!");
 
       const scanId = `scan-${Date.now()}`;
       const newRecord: StoredScanRecord = {
         id: scanId,
+        request_id: uniqueRequestId,
         created_at: new Date().toISOString(),
         crop: reportData.crop || selectedCrop,
         disease_name: reportData.disease_name,
@@ -322,8 +344,11 @@ export function DiagnosisPage() {
         safety_note: reportData.safety_note,
       };
 
+      // 4. Save exactly one record to local state
       if (user?.id) {
         setHistoryList((prev) => {
+          // Prevent duplicates if already exists in state
+          if (prev.some((p) => p.request_id === uniqueRequestId)) return prev;
           const updated = [newRecord, ...prev];
           localStorage.setItem(`bluesky_diagnoses_history_${user.id}`, JSON.stringify(updated));
           return updated;
@@ -332,9 +357,11 @@ export function DiagnosisPage() {
 
       window.dispatchEvent(new Event("bluesky_diagnosis_completed"));
 
+      // 5. Save exactly one record to database
       if (user?.id) {
         const payload = {
           user_id: user.id,
+          request_id: uniqueRequestId,
           crop: newRecord.crop,
           disease_name: newRecord.disease_name,
           scientific_name: newRecord.scientific_name,
@@ -368,9 +395,10 @@ export function DiagnosisPage() {
       }
     } catch (err: any) {
       console.error("DIAGNOSIS_FAILED:", err);
-      toast.error(err.message || "Failed to generate diagnosis.");
+      toast.error(err.message || "AI service currently unavailable. Please retry.");
     } finally {
       setAnalyzing(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -390,18 +418,12 @@ export function DiagnosisPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-16 font-sans">
       <TierBanner />
-      {currentTier === "grower_pro" && !isOwner && (
-        <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200 flex items-center justify-between">
-          <span>Grower Pro Quota: 40 AI Scans / Month (40/mo cap enforced)</span>
-          <span className="font-mono font-bold">Act 36 Enabled</span>
-        </div>
-      )}
 
       {/* Top Header & Tab Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 transition-colors">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Neural Vision Pathologist
+            <Sparkles className="h-3.5 w-3.5" /> Single-Request Pathologist Guard Active
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
             Visual Crop Diagnostic Engine
@@ -452,8 +474,9 @@ export function DiagnosisPage() {
                 </label>
                 <select
                   value={selectedCrop}
+                  disabled={analyzing}
                   onChange={(e) => setSelectedCrop(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium disabled:opacity-50"
                 >
                   {COMMON_CROPS.map((c) => (
                     <option key={c} value={c}>
@@ -534,21 +557,23 @@ export function DiagnosisPage() {
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
+                    disabled={analyzing}
                     onChange={handleImageUpload}
                     className="hidden"
                   />
                 </div>
               </div>
 
+              {/* Disabled Scan Button During Processing */}
               <button
                 onClick={handleRunDiagnosis}
                 disabled={analyzing || !selectedImage}
-                className="cursor-pointer w-full relative flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-xs font-bold text-white shadow-md transition hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-50"
+                className="cursor-pointer w-full relative flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-xs font-bold text-white shadow-md transition hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {analyzing ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <span>Neural Pathologist Scanning...</span>
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    <span>Analyzing Specimen (1 Request)...</span>
                   </>
                 ) : (
                   <>
@@ -590,12 +615,25 @@ export function DiagnosisPage() {
                     </div>
                   </div>
 
+                  {/* Low Confidence Warning Prompt */}
+                  {report.confidence < 75 && (
+                    <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-300 flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-xs uppercase tracking-wider">Low Confidence Warning</h4>
+                        <p className="text-xs leading-relaxed">
+                          The confidence score is below 75%. Lighting, angle, or blur may impact accuracy. Consider uploading a sharper, well-lit photo of the upper and lower leaf surfaces.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-4">
                     <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                       {report.disease_name}
                     </h2>
                     <p className="text-xs italic text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                      {report.scientific_name} • {report.pathogen_type}
+                      {report.scientific_name} • {report.pathogen_type} {report.requestId ? `• ID: ${report.requestId.slice(-6)}` : ""}
                     </p>
                   </div>
 

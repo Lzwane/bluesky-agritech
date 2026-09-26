@@ -15,6 +15,10 @@ import {
   LayoutDashboard,
   AppWindow,
   MailCheck,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  CheckCircle2,
 } from "lucide-react";
 
 import logoImg from "@/assets/BlueSky_AgrITech_Logo.png";
@@ -30,11 +34,6 @@ export const Route = createFileRoute("/auth")({
         name: "description",
         content:
           "Sign in to your AI Crop Detective account to diagnose crop pests, diseases, and nutrient deficiencies.",
-      },
-      { property: "og:title", content: "Sign In — AI Crop Detective" },
-      {
-        property: "og:description",
-        content: "Access AI crop diagnostics, the disease library, marketplace, and farm advisor.",
       },
     ],
   }),
@@ -54,6 +53,13 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [recoveryStep, setRecoveryStep] = useState<"request" | "verify" | "success">("request");
+  
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
@@ -61,12 +67,24 @@ function AuthPage() {
   const [signupConfirmationSent, setSignupConfirmationSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Rate limit / resend timer state
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   const { session, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
   }, []);
+
+  useEffect(() => {
+    let timer: any;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     if (!loading && session && mode !== "forgot") {
@@ -125,21 +143,12 @@ function AuthPage() {
 
         if (error) {
           const lowerMsg = error.message.toLowerCase();
-          if (
-            lowerMsg.includes("already registered") ||
-            lowerMsg.includes("user already exists")
-          ) {
+          if (lowerMsg.includes("already registered") || lowerMsg.includes("user already exists")) {
             toast.error("This email is already registered. Please sign in instead.");
             setMode("signin");
             return;
           }
           throw error;
-        }
-
-        if (data.user && data.user.identities && data.user.identities.length === 0) {
-          toast.error("This email is already registered. Please sign in instead.");
-          setMode("signin");
-          return;
         }
 
         if (data.user?.id) {
@@ -154,9 +163,7 @@ function AuthPage() {
         }
 
         if (!data.session) {
-          // Email confirmation is required / waiting for confirmation
-          setSignupConfirmationSent(true);
-          toast.success("Confirmation email sent! Please check your inbox.");
+          navigate({ to: "/verify-email", replace: true });
         } else {
           toast.success("Account created successfully! Welcome to BlueSky.");
           if (parsed.data.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) {
@@ -186,22 +193,60 @@ function AuthPage() {
     }
   }
 
-  async function handleForgotPassword(event: React.FormEvent) {
+  // Non-revealing password reset request (prevents user enumeration security risks)
+  async function handleRequestResetCode(event: React.FormEvent) {
     event.preventDefault();
     if (!email.trim() || !email.includes("@")) {
       toast.error("Please enter a valid email address");
       return;
     }
+
+    if (resendCooldown > 0) {
+      toast.error(`Please wait ${resendCooldown}s before requesting a new code.`);
+      return;
+    }
+
     setBusy(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) throw error;
-      toast.success("Password reset instructions sent to your email!");
-      setMode("signin");
+      
+      // Do not reveal if email is registered or not (security best practice)
+      toast.success("If this email is registered, verification instructions have been dispatched.");
+      setRecoveryStep("verify");
+      setResendCooldown(60); // 60-second rate limit
     } catch (err: any) {
-      toast.error(err.message || "Failed to send reset email");
+      toast.success("If this email is registered, verification instructions have been dispatched.");
+      setRecoveryStep("verify");
+      setResendCooldown(60);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Handle password reset confirmation with double-entry matching
+  async function handleConfirmResetPassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("New password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("New passwords do not match. Please verify both entries.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      // If user clicked link with OTP token or entering OTP code
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setRecoveryStep("success");
+      toast.success("Password successfully reset!");
+    } catch (err: any) {
+      toast.error(err.message || "Invalid or expired verification code.");
     } finally {
       setBusy(false);
     }
@@ -214,16 +259,12 @@ function AuthPage() {
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
+          queryParams: { access_type: "offline", prompt: "consent" },
         },
       });
-
       if (error) throw error;
     } catch (err: any) {
-      toast.error(err?.message || "Google authentication failed. Please verify Supabase provider settings.");
+      toast.error(err?.message || "Google authentication failed.");
       setBusy(false);
     }
   }
@@ -286,7 +327,7 @@ function AuthPage() {
         </div>
       </div>
 
-      {/* Right Blackboard Form Container */}
+      {/* Right Form Container */}
       <div className="relative lg:col-span-7 flex flex-col justify-center items-center px-6 py-10 sm:px-12 md:px-16 lg:px-12 xl:px-20 bg-[#11161d] overflow-y-auto">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/20 via-transparent to-transparent pointer-events-none" />
 
@@ -296,25 +337,21 @@ function AuthPage() {
             <div className="relative group mb-3">
               <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
               <div className="relative flex h-18 w-18 items-center justify-center rounded-2xl bg-slate-900/90 border border-slate-700/80 p-2 shadow-2xl">
-                <img
-                  src={logoImg}
-                  alt="BlueSky AgriTech"
-                  className="h-14 w-14 object-contain filter drop-shadow"
-                />
+                <img src={logoImg} alt="BlueSky AgriTech" className="h-14 w-14 object-contain filter drop-shadow" />
               </div>
             </div>
             <h2 className="text-2xl font-bold tracking-tight text-white">
               {mode === "signin"
                 ? "Sign In to BlueSky"
                 : mode === "forgot"
-                ? "Reset Your Password"
+                ? "Password Recovery"
                 : "Create your Account"}
             </h2>
             <p className="mt-0.5 text-xs text-slate-400">
               {mode === "signin"
                 ? "Enter your details to access the AI diagnostics portal"
                 : mode === "forgot"
-                ? "Enter your email address to receive password restart instructions"
+                ? "Secure email verification and password reset workflow"
                 : "Join the BlueSky precision agriculture network"}
             </p>
           </div>
@@ -342,50 +379,171 @@ function AuthPage() {
                 </button>
               </div>
             ) : mode === "forgot" ? (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
-                <div>
-                  <div className="relative">
-                    <input
-                      id="forgot-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder=" "
-                      autoComplete="email"
-                      required
-                      className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                    />
-                    <label
-                      htmlFor="forgot-email"
-                      className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+              <div>
+                {recoveryStep === "request" && (
+                  <form onSubmit={handleRequestResetCode} className="space-y-4">
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Enter your registered email address. We will send a secure verification code with a 15-minute expiry period to reset your password.
+                    </p>
+                    <div className="relative">
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder=" "
+                        autoComplete="email"
+                        required
+                        className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      />
+                      <label
+                        htmlFor="forgot-email"
+                        className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
+                      >
+                        Registered account email address
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
                     >
-                      Enter your account email address
-                    </label>
+                      {busy ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <span>Send Verification Code</span>
+                      )}
+                    </button>
+
+                    <div className="text-center pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("signin");
+                          setRecoveryStep("request");
+                        }}
+                        className="text-xs text-slate-400 hover:text-white transition cursor-pointer"
+                      >
+                        &larr; Back to sign in
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {recoveryStep === "verify" && (
+                  <form onSubmit={handleConfirmResetPassword} className="space-y-4">
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-300 space-y-1">
+                      <p className="font-bold">Verification code dispatched</p>
+                      <p className="text-[11px] text-slate-300">
+                        Check your inbox for <span className="font-mono text-emerald-400">{email}</span>. Enter the code and your new password below. Code expires in 15 minutes.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                        Verification Code / OTP Token
+                      </label>
+                      <input
+                        type="text"
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value)}
+                        placeholder="Enter code from email"
+                        required
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                        New Password (8+ characters, letters &amp; numbers)
+                      </label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="At least 8 characters"
+                        required
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                        Confirm New Password (Must match exactly)
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        required
+                        className="w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
+                    >
+                      {busy ? (
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      ) : (
+                        <span>Reset Password</span>
+                      )}
+                    </button>
+
+                    <div className="flex items-center justify-between pt-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={handleRequestResetCode}
+                        disabled={resendCooldown > 0 || busy}
+                        className="text-emerald-400 hover:underline flex items-center gap-1 disabled:opacity-50 cursor-pointer"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        {resendCooldown > 0 ? `Resend Code in ${resendCooldown}s` : "Resend Code"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("signin");
+                          setRecoveryStep("request");
+                        }}
+                        className="text-slate-400 hover:text-white transition cursor-pointer"
+                      >
+                        Back to Sign In
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {recoveryStep === "success" && (
+                  <div className="text-center space-y-4 py-4">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      <CheckCircle2 className="h-7 w-7" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">Password Successfully Reset</h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Your password has been updated securely. You can now sign in using your new credentials.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("signin");
+                        setRecoveryStep("request");
+                        setPassword("");
+                        setNewPassword("");
+                        setConfirmNewPassword("");
+                      }}
+                      className="mt-4 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition cursor-pointer"
+                    >
+                      Sign In Now
+                    </button>
                   </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
-                >
-                  {busy ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    <span>Send Reset Instructions</span>
-                  )}
-                </button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setMode("signin")}
-                    className="text-xs text-slate-400 hover:text-white transition cursor-pointer"
-                  >
-                    &larr; Back to sign in
-                  </button>
-                </div>
-              </form>
+                )}
+              </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === "signup" && (
@@ -405,7 +563,7 @@ function AuthPage() {
                         htmlFor="displayName"
                         className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
                       >
-                        What is your full name?
+                        Full name?
                       </label>
                     </div>
                     {errors["displayName"] && (
@@ -431,7 +589,7 @@ function AuthPage() {
                       htmlFor="email"
                       className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
                     >
-                      What is your email address?
+                      Email Address
                     </label>
                   </div>
                   {errors["email"] && (
@@ -439,34 +597,52 @@ function AuthPage() {
                   )}
                 </div>
 
-                {/* Password */}
+                {/* Password with Show/Hide Toggle */}
                 <div>
                   <div className="relative">
                     <input
                       id="password"
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder=" "
                       autoComplete={mode === "signup" ? "new-password" : "current-password"}
                       required
-                      className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="peer block w-full rounded-xl border border-slate-700/80 bg-slate-900/60 px-4 pt-6 pb-2 pr-12 text-sm text-white placeholder-transparent transition-all focus:border-emerald-500 focus:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                     />
                     <label
                       htmlFor="password"
                       className="pointer-events-none absolute left-4 top-2 text-[11px] font-medium text-slate-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-sm peer-placeholder-shown:text-slate-500 peer-focus:top-2 peer-focus:text-[11px] peer-focus:text-emerald-400"
                     >
-                      {mode === "signup" ? "Create a secure password (8+ chars)" : "Enter your secret password"}
+                      Password
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3.5 top-4 text-slate-400 hover:text-white transition cursor-pointer"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
+
+                  {mode === "signup" && (
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Must be at least 8 characters long with letters and numbers.
+                    </p>
+                  )}
+
                   {mode === "signin" && (
                     <div className="flex justify-end mt-1">
                       <button
                         type="button"
-                        onClick={() => setMode("forgot")}
+                        onClick={() => {
+                          setMode("forgot");
+                          setRecoveryStep("request");
+                        }}
                         className="text-[11px] text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
                       >
-                        Forgot password?
+                        Forgot Password?
                       </button>
                     </div>
                   )}
@@ -502,7 +678,7 @@ function AuthPage() {
                             e.preventDefault();
                             setLegalModalOpen(true);
                           }}
-                          className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer"
+                          className="font-semibold text-emerald-400 hover:underline cursor-pointer"
                         >
                           User Agreement ({CURRENT_AGREEMENT_VERSION})
                         </button>
@@ -532,9 +708,7 @@ function AuthPage() {
                       </span>
                     </label>
                     {errors["agreement"] && (
-                      <p className="mt-1.5 text-xs font-medium text-rose-400">
-                        {errors["agreement"]}
-                      </p>
+                      <p className="mt-1.5 text-xs font-medium text-rose-400">{errors["agreement"]}</p>
                     )}
                   </div>
                 )}
@@ -557,7 +731,7 @@ function AuthPage() {
               </form>
             )}
 
-            {!signupConfirmationSent && (
+            {!signupConfirmationSent && mode !== "forgot" && (
               <>
                 <div className="my-6 flex items-center gap-3">
                   <span className="h-px flex-1 bg-slate-800" />
@@ -621,7 +795,7 @@ function AuthPage() {
         </div>
       </div>
 
-      {/* Nice Portal Choice Modal for Owner */}
+      {/* Owner Portal Modal */}
       {showPortalChoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-lg rounded-3xl border border-emerald-500/40 bg-[#161d26] p-7 shadow-2xl space-y-6">
@@ -648,9 +822,7 @@ function AuthPage() {
                   <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
                     Executive Admin Dashboard
                   </h4>
-                  <p className="text-xs text-slate-400">
-                    View app revenue, active users, subscription analytics, and audit logs.
-                  </p>
+                  <p className="text-xs text-slate-400">View app revenue, active users, and subscription analytics.</p>
                 </div>
               </button>
 
@@ -666,9 +838,7 @@ function AuthPage() {
                   <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition">
                     Standard Farmer Application
                   </h4>
-                  <p className="text-xs text-slate-400">
-                    Use foliar scanner &amp; AI agronomist with uncapped owner privileges.
-                  </p>
+                  <p className="text-xs text-slate-400">Use foliar scanner &amp; AI agronomist with uncapped privileges.</p>
                 </div>
               </button>
             </div>
@@ -676,7 +846,7 @@ function AuthPage() {
         </div>
       )}
 
-      {/* Legal & User Agreement Modal for Auth */}
+      {/* Legal & User Agreement Modal */}
       {legalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
           <div className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-700 bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-200 space-y-5">
@@ -728,22 +898,10 @@ function AuthPage() {
 function GoogleIcon() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
-      <path
-        fill="#4285F4"
-        d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.2h6.6c-.1 1.1-.9 2.8-2.5 3.9l3.8 3c2.3-2.1 3.6-5.2 3.6-8.9z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-3c-1 .7-2.4 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5l-4 3.1C3.2 21.3 7.3 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.2 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.6C.4 8.2 0 10 0 12s.4 3.8 1.2 5.4l4-3.1z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.7c2.3 0 3.8.9 4.7 1.8l3.4-3.3C18 1.2 15.2 0 12 0 7.3 0 3.2 2.7 1.2 6.6l4 3.1C6.1 6.8 8.8 4.7 12 4.7z"
-      />
+      <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.2-2.2H12v4.2h6.6c-.1 1.1-.9 2.8-2.5 3.9l3.8 3c2.3-2.1 3.6-5.2 3.6-8.9z" />
+      <path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.8-3c-1 .7-2.4 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5l-4 3.1C3.2 21.3 7.3 24 12 24z" />
+      <path fill="#FBBC05" d="M5.2 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.2 6.6C.4 8.2 0 10 0 12s.4 3.8 1.2 5.4l4-3.1z" />
+      <path fill="#EA4335" d="M12 4.7c2.3 0 3.8.9 4.7 1.8l3.4-3.3C18 1.2 15.2 0 12 0 7.3 0 3.2 2.7 1.2 6.6l4 3.1C6.1 6.8 8.8 4.7 12 4.7z" />
     </svg>
   );
 }
