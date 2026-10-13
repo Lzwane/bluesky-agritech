@@ -279,7 +279,7 @@ function Index() {
             alt="South African farmer inspecting maize plants at sunrise"
             className="absolute inset-0 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/92 to-background/40" />
+          <div className="absolute inset-0 bg-linear-to-r from-background via-background/92 to-background/40" />
           <div className="relative mx-auto w-full max-w-7xl px-4 py-20 lg:px-6 lg:py-28">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
