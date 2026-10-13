@@ -487,7 +487,7 @@ function Index() {
                 <Mail className="h-6 w-6 text-emerald-600 shrink-0 mt-1" />
                 <div>
                   <h3 className="font-bold text-sm">Support Email</h3>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">mnisithokozani829@gmail.com</p>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">support@blueskyagritech.co.za</p>
                 </div>
               </div>
             </div>
@@ -521,7 +521,7 @@ function Index() {
           </nav>
           <div className="text-xs space-y-1">
             <p>&copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.</p>
-            <p className="text-muted-foreground">Support: mnisithokozani829@gmail.com | +27 76 104 7696</p>
+            <p className="text-muted-foreground">Support: support@blueskyagritech.co.za | +27 76 104 7696</p>
           </div>
         </div>
       </footer>

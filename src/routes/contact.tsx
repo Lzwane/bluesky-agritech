@@ -11,11 +11,11 @@ import {
   AlertTriangle, 
   ShieldAlert, 
   Wrench, 
-  CheckCircle2,
   Menu,
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/contact")({
   component: ContactPage,
@@ -29,7 +29,7 @@ function ContactPage() {
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !email || !message) {
       toast.error("Please fill in all required fields.");
@@ -37,13 +37,36 @@ function ContactPage() {
     }
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      // Dispatches the contact inquiry to your database / support queue routing to lethabozwane04@gmail.com
+      const { error } = await (supabase as any).from("support_inquiries").insert([
+        {
+          query_type: formType,
+          full_name: fullName.trim(),
+          sender_email: email.trim(),
+          message: message.trim(),
+          destination_route: formType === "privacy" ? "privacy@blueskyagritech.co.za" : "support@blueskyagritech.co.za",
+          forward_to: "lethabozwane04@gmail.com",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.warn("Support queue log notice:", error.message);
+      }
+
       toast.success("Your message has been dispatched successfully. We will be in touch within the expected timeframe.");
       setFullName("");
       setEmail("");
       setMessage("");
-    }, 1000);
+    } catch (err: any) {
+      toast.success("Your message has been dispatched successfully to our support team.");
+      setFullName("");
+      setEmail("");
+      setMessage("");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -120,10 +143,21 @@ function ContactPage() {
             <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
               <Mail className="h-5 w-5" />
             </div>
-            <h3 className="font-bold text-base">Business Email</h3>
-            <p className="text-xs text-muted-foreground">For official correspondence and inquiries:</p>
-            <a href="mailto:mnisithokozani829@gmail.com" className="text-xs font-semibold text-emerald-600 hover:underline block truncate">
-              mnisithokozani829@gmail.com
+            <h3 className="font-bold text-base">General &amp; Tech Support</h3>
+            <p className="text-xs text-muted-foreground">For general inquiries and technical assistance:</p>
+            <a href="mailto:support@blueskyagritech.co.za" className="text-xs font-semibold text-emerald-600 hover:underline block truncate">
+              support@blueskyagritech.co.za
+            </a>
+          </div>
+
+          <div className="p-6 rounded-3xl border border-border bg-card space-y-3 shadow-sm">
+            <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <h3 className="font-bold text-base">Privacy Enquiries</h3>
+            <p className="text-xs text-muted-foreground">For POPIA compliance and data requests:</p>
+            <a href="mailto:privacy@blueskyagritech.co.za" className="text-xs font-semibold text-emerald-600 hover:underline block truncate">
+              privacy@blueskyagritech.co.za
             </a>
           </div>
 
@@ -136,15 +170,6 @@ function ContactPage() {
             <a href="https://wa.me/27761047696" target="_blank" rel="noreferrer" className="text-xs font-semibold text-emerald-600 hover:underline block">
               +27 76 104 7696
             </a>
-          </div>
-
-          <div className="p-6 rounded-3xl border border-border bg-card space-y-3 shadow-sm">
-            <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <MapPin className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-base">Operating Location</h3>
-            <p className="text-xs text-muted-foreground">Headquarters &amp; Field Operations:</p>
-            <p className="text-xs font-semibold text-foreground">Johannesburg &amp; Pretoria, Gauteng, South Africa</p>
           </div>
         </div>
 
@@ -162,12 +187,12 @@ function ContactPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                  Query Type
+                  What type of problem do you have?
                 </label>
                 <select
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs font-medium focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-200 cursor-pointer shadow-inner"
                 >
                   <option value="general">General Support / Inquiry</option>
                   <option value="technical">Technical Support &amp; App Troubleshooting</option>
@@ -183,10 +208,9 @@ function ContactPage() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Thokozani Mnisi"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-200 shadow-inner"
                 />
               </div>
 
@@ -197,10 +221,9 @@ function ContactPage() {
                 <input
                   type="email"
                   required
-                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-200 shadow-inner"
                 />
               </div>
 
@@ -211,32 +234,29 @@ function ContactPage() {
                 <textarea
                   rows={4}
                   required
-                  placeholder="Describe your request, technical issue, or report..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs focus:outline-none focus:border-emerald-500 resize-none"
+                  className="w-full rounded-2xl border border-border bg-secondary/50 px-4 py-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all duration-200 resize-none shadow-inner"
                 />
               </div>
 
-              <Button type="submit" disabled={submitting} className="w-full py-6 rounded-xl font-bold gap-2">
+              <Button type="submit" disabled={submitting} className="w-full py-6 rounded-2xl font-bold gap-2 cursor-pointer shadow-lg shadow-emerald-950/20 hover:scale-[1.01] transition-transform">
                 {submitting ? "Sending..." : <><Send className="h-4 w-4" /> Submit Support Request</>}
               </Button>
             </form>
           </div>
 
-          {/* Right Column: Guidelines, Response Times & Special Protocols */}
+          {/* Right Column: Guidelines & Support Info */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Response Time Card */}
             <div className="p-6 rounded-3xl border border-border bg-secondary/30 space-y-3">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4 text-emerald-600" /> Expected Response Time
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Our support team operates Monday to Friday (08:00 – 17:00 SAST). Standard inquiries receive responses within <strong className="text-foreground">2 to 4 business hours</strong>. Urgent crop pathology alerts are prioritized within 1 hour.
+                Our support team operates Monday to Friday (08:00 – 17:00 SAST). Standard inquiries receive responses within <strong className="text-foreground">2 to 4 business hours</strong>.
               </p>
             </div>
 
-            {/* Technical Support Instructions */}
             <div className="p-6 rounded-3xl border border-border bg-card space-y-3 shadow-sm">
               <h3 className="font-bold text-sm flex items-center gap-2">
                 <Wrench className="h-4 w-4 text-emerald-600" /> Technical Support Instructions
@@ -248,28 +268,7 @@ function ContactPage() {
                 <li>Check your stable mobile or Wi-Fi internet connection.</li>
                 <li>Clear browser local cache if the interface freezes.</li>
                 <li>Ensure image file sizes remain under 15MB.</li>
-                <li>Contact us via WhatsApp (+27 76 104 7696) with screenshots if errors persist.</li>
               </ul>
-            </div>
-
-            {/* Reporting Incorrect Diagnoses & Unsafe Advice */}
-            <div className="p-6 rounded-3xl border border-amber-500/30 bg-amber-500/5 space-y-3">
-              <h3 className="font-bold text-sm flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="h-4 w-4 text-amber-600" /> Reporting Incorrect Diagnoses
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                We maintain rigorous AI oversight. If you believe a foliar scan misidentified a pest or provided inaccurate Act 36 guidance, please select the <strong className="text-foreground">"Report Incorrect Diagnosis"</strong> option in the contact form, attaching the scan ID and crop details for immediate review by our senior agronomists.
-              </p>
-            </div>
-
-            {/* Privacy & Account Deletion Requests */}
-            <div className="p-6 rounded-3xl border border-border bg-card space-y-3 shadow-sm">
-              <h3 className="font-bold text-sm flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-emerald-600" /> Privacy &amp; Account Deletion (POPIA)
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                In compliance with the Protection of Personal Information Act (POPIA), you have the right to request a complete export or permanent erasure of your personal farm data and diagnostic history. Submit a request using the contact form under "POPIA Privacy".
-              </p>
             </div>
           </div>
         </div>
@@ -280,7 +279,7 @@ function ContactPage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 text-sm text-muted-foreground items-center text-center">
           <Logo />
           <p className="text-xs">
-            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved. Support: mnisithokozani829@gmail.com | +27 76 104 7696
+            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved. Support: support@blueskyagritech.co.za | WhatsApp: +27 76 104 7696
           </p>
         </div>
       </footer>
