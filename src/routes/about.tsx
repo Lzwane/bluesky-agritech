@@ -4,6 +4,12 @@ import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Building2, ShieldCheck, Users, MapPin, Mail, Phone, ExternalLink, Menu, X } from "lucide-react";
 
+import thokozaniImg from "@/assets/Thokozani.jpeg";
+import osegoImg from "@/assets/Osego.jpeg";
+import thembelaniImg from "@/assets/Thembelani.jpeg";
+import mbaliImg from "@/assets/Mbali.jpeg";
+import thandokaziImg from "@/assets/Thandokazi.jpeg";
+
 export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
@@ -11,33 +17,38 @@ export const Route = createFileRoute("/about")({
 const TEAM_MEMBERS = [
   {
     name: "Thokozani Mnisi",
-    role: "Founder & Chief Technology Officer",
-    bio: "Lead developer and agricultural systems architect specializing in edge AI diagnostics and rural connectivity.",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400",
+    role: "Founder and Owner",
+    bio: "Thokozani Mnisi is the founder and owner of BlueSky Agritech, a South African agricultural technology company focused on improving access to crop-health information and practical farming support.",
+    image: thokozaniImg,
+    objectPosition: "center 25%",
   },
   {
-    name: "Dr. Lerato Molefe",
-    role: "Head of Plant Pathology",
-    bio: "Senior agronomist overseeing multi-spectral crop inspection accuracy and Act 36 regulatory compliance.",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",
+    name: "Osego Moilwa",
+    role: "Founding Project Team Member",
+    bio: "Contributed to the early BlueSky Agritech project through the University of Johannesburg and Enactus.",
+    image: osegoImg,
+    //objectPosition: "center 25%",
   },
   {
-    name: "Sipho Dlamini",
-    role: "Lead Field Agronomist",
-    bio: "Coordinates regional trial tests across maize, soybean, and citrus farms in Gauteng and Mpumalanga.",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400",
+    name: "Thembelani Thwala",
+    role: "Founding Project Team Member",
+    bio: "Contributed to the early BlueSky Agritech project through the University of Johannesburg and Enactus.",
+    image: thembelaniImg,
+    //objectPosition: "center 25%",
   },
   {
-    name: "Kabelo Mokoena",
-    role: "AI & Machine Learning Engineer",
-    bio: "Fine-tunes transformer computer vision models for low-bandwidth mobile devices in rural farming communities.",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400",
+    name: "Mbali Mtikitiki",
+    role: "Founding Project Team Member",
+    bio: "Contributed to the early BlueSky Agritech project through the University of Johannesburg and Enactus.",
+    image: mbaliImg,
+    //objectPosition: "center 25%",
   },
   {
-    name: "Nandi Khumalo",
-    role: "Community & Extension Manager",
-    bio: "Manages farmer onboarding, localized translation dialects (all 11 official languages), and cooperative networks.",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=400",
+    name: "Thandokazi Mdiya",
+    role: "Founding Project Team Member",
+    bio: "Contributed to the early BlueSky Agritech project through the University of Johannesburg and Enactus.",
+    image: thandokaziImg,
+    //objectPosition: "center 25%",
   },
 ];
 
@@ -108,7 +119,7 @@ function AboutPage() {
           </span>
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">About BlueSky AgriTech</h1>
           <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-            BlueSky AgriTech (Pty) Ltd is an agricultural technology enterprise headquartered across Johannesburg and Pretoria, Gauteng, dedicated to empowering farmers through cutting-edge artificial intelligence and verified agronomic protocols.
+            BlueSky Agritech is a South African agricultural technology company focused on improving access to crop-health information and practical farming support.
           </p>
         </div>
 
@@ -163,13 +174,20 @@ function AboutPage() {
             <h2 className="font-display text-3xl font-extrabold flex items-center justify-center gap-2">
               <Users className="h-7 w-7 text-emerald-600" /> Meet Our Team
             </h2>
-            <p className="text-sm text-muted-foreground">The dedicated professionals behind BlueSky AgriTech.</p>
+            <p className="text-sm text-muted-foreground">The dedicated professionals and founders behind BlueSky Agritech.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {TEAM_MEMBERS.map((member) => (
               <div key={member.name} className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm flex flex-col">
-                <img src={member.image} alt={member.name} className="h-48 w-full object-cover" />
+                <div className="h-56 w-full overflow-hidden bg-slate-900">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="h-full w-full object-cover scale-110 transition hover:scale-125 duration-500"
+                    style={{ objectPosition: member.objectPosition || "center center" }}
+                  />
+                </div>
                 <div className="p-6 flex-1 flex flex-col justify-between space-y-2">
                   <div>
                     <h3 className="font-display text-lg font-bold">{member.name}</h3>
@@ -187,7 +205,7 @@ function AboutPage() {
           <div className="p-6 rounded-3xl border border-border bg-card space-y-2">
             <MapPin className="h-6 w-6 text-emerald-600" />
             <h3 className="font-bold text-sm">Operating Location</h3>
-            <p className="text-xs text-muted-foreground">Johannesburg &amp; Pretoria, Gauteng, Republic of South Africa</p>
+            <p className="text-xs text-muted-foreground">South Africa (Serving farmers and agricultural users across the country through our online platform)</p>
           </div>
           <div className="p-6 rounded-3xl border border-border bg-card space-y-2">
             <Phone className="h-6 w-6 text-emerald-600" />
@@ -197,7 +215,7 @@ function AboutPage() {
           <div className="p-6 rounded-3xl border border-border bg-card space-y-2">
             <Mail className="h-6 w-6 text-emerald-600" />
             <h3 className="font-bold text-sm">Support Email</h3>
-            <p className="text-xs text-muted-foreground">mnisithokozani829@gmail.com</p>
+            <p className="text-xs text-muted-foreground">support@blueskyagritech.co.za</p>
           </div>
         </div>
 
@@ -205,7 +223,7 @@ function AboutPage() {
         <div className="p-8 rounded-3xl border border-border bg-secondary/30 space-y-4">
           <h2 className="font-display text-xl font-bold">Regions Served &amp; Resources</h2>
           <p className="text-xs text-muted-foreground">
-            Currently serving agricultural enterprises across the Republic of South Africa (Primary rollout in Gauteng, Limpopo, Mpumalanga, and North West).
+            BlueSky Agritech serves farmers and agricultural users across South Africa through its online platform.
           </p>
           <div className="pt-2 flex flex-wrap gap-4 text-xs font-semibold">
             <a href="https://www.daff.gov.za" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-emerald-600 hover:underline">
@@ -222,7 +240,7 @@ function AboutPage() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 text-sm text-muted-foreground items-center text-center">
           <Logo />
           <p className="text-xs">
-            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved. Support: mnisithokozani829@gmail.com | +27 76 104 7696
+            &copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved. Support: support@blueskyagritech.co.za | +27 76 104 7696
           </p>
         </div>
       </footer>
