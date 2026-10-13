@@ -218,7 +218,7 @@ export function AdminDashboardPage() {
     <div className="min-h-screen bg-slate-100 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500 selection:text-white transition-colors">
       {/* Standalone Overseer Command Header */}
       <header className="sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-[#090d16]/95 backdrop-blur-xl">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-360 mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               to="/app"
@@ -265,10 +265,10 @@ export function AdminDashboardPage() {
       </header>
 
       {/* Main Overseer Content Canvas */}
-      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="max-w-360 mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
         {/* Executive Banner (No trial countdown suppression or mention of non-paying account state) */}
-        <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-50 via-teal-50/50 to-white dark:from-[#111d27] dark:via-[#111722] dark:to-[#090d16] p-6 sm:p-8 relative overflow-hidden shadow-sm dark:shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="rounded-3xl border border-emerald-500/30 bg-linear-to-r from-emerald-50 via-teal-50/50 to-white dark:from-[#111d27] dark:via-[#111722] dark:to-[#090d16] p-6 sm:p-8 relative overflow-hidden shadow-sm dark:shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <span className="text-[11px] font-mono uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-bold">
               Executive Command
@@ -290,7 +290,7 @@ export function AdminDashboardPage() {
               <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight font-mono text-slate-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
                 R{metrics.monthlyRevenueZAR.toLocaleString()}
               </span>
               <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">
@@ -308,7 +308,7 @@ export function AdminDashboardPage() {
               <Users className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight font-mono text-slate-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {metrics.totalUsers.toLocaleString()}
               </span>
               <span className="text-[11px] font-mono text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-2 py-0.5 rounded-full font-bold">
@@ -326,7 +326,7 @@ export function AdminDashboardPage() {
               <Zap className="h-4 w-4 text-amber-500" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight font-mono text-slate-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {metrics.proSubscribers + metrics.commercialSubscribers}
               </span>
               <span className="text-[11px] font-mono text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full font-bold">
@@ -344,7 +344,7 @@ export function AdminDashboardPage() {
               <ScanLine className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="mt-3 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight font-mono text-slate-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-display font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {metrics.totalScansRecorded.toLocaleString()}
               </span>
               <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full font-bold">

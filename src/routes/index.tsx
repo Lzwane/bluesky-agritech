@@ -279,7 +279,7 @@ function Index() {
             alt="South African farmer inspecting maize plants at sunrise"
             className="absolute inset-0 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/92 to-background/40" />
+          <div className="absolute inset-0 bg-linear-to-r from-background via-background/92 to-background/40" />
           <div className="relative mx-auto w-full max-w-7xl px-4 py-20 lg:px-6 lg:py-28">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -487,7 +487,7 @@ function Index() {
                 <Mail className="h-6 w-6 text-emerald-600 shrink-0 mt-1" />
                 <div>
                   <h3 className="font-bold text-sm">Support Email</h3>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">mnisithokozani829@gmail.com</p>
+                  <p className="text-xs text-muted-foreground mt-1 truncate">support@blueskyagritech.co.za</p>
                 </div>
               </div>
             </div>
@@ -521,7 +521,7 @@ function Index() {
           </nav>
           <div className="text-xs space-y-1">
             <p>&copy; {new Date().getFullYear()} BlueSky AgriTech Pty LTD. All rights reserved.</p>
-            <p className="text-muted-foreground">Support: mnisithokozani829@gmail.com | +27 76 104 7696</p>
+            <p className="text-muted-foreground">Support: support@blueskyagritech.co.za | +27 76 104 7696</p>
           </div>
         </div>
       </footer>

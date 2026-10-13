@@ -272,8 +272,8 @@ function AuthPage() {
   return (
     <div className="grid min-h-screen w-full lg:grid-cols-12 bg-[#0d1217] font-sans">
       {/* Left Info Column */}
-      <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between overflow-hidden p-8 xl:p-10 bg-gradient-to-br from-emerald-950/70 via-slate-900 to-[#0b1015] border-r border-slate-800/60">
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
+      <div className="relative hidden lg:flex lg:col-span-5 flex-col justify-between overflow-hidden p-8 xl:p-10 bg-linear-to-br from-emerald-950/70 via-slate-900 to-[#0b1015] border-r border-slate-800/60">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] bg-size-[24px_24px] opacity-15 pointer-events-none" />
         <div className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-emerald-500/15 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex items-center gap-3">
@@ -329,13 +329,13 @@ function AuthPage() {
 
       {/* Right Form Container */}
       <div className="relative lg:col-span-7 flex flex-col justify-center items-center px-6 py-10 sm:px-12 md:px-16 lg:px-12 xl:px-20 bg-[#11161d] overflow-y-auto">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/20 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-slate-800/20 via-transparent to-transparent pointer-events-none" />
 
         <div className="relative z-10 w-full max-w-lg">
           {/* Centered Logo & Branding */}
           <div className="flex flex-col items-center text-center mb-6">
             <div className="relative group mb-3">
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
+              <div className="absolute -inset-1.5 bg-linear-to-r from-emerald-500 to-cyan-500 rounded-2xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
               <div className="relative flex h-18 w-18 items-center justify-center rounded-2xl bg-slate-900/90 border border-slate-700/80 p-2 shadow-2xl">
                 <img src={logoImg} alt="BlueSky AgriTech" className="h-14 w-14 object-contain filter drop-shadow" />
               </div>
@@ -407,7 +407,7 @@ function AuthPage() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
+                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
                     >
                       {busy ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -485,7 +485,7 @@ function AuthPage() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
+                      className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-60"
                     >
                       {busy ? (
                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -717,7 +717,7 @@ function AuthPage() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
+                  className="cursor-pointer group relative mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition-all hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 active:scale-[0.99] disabled:opacity-60"
                 >
                   {busy ? (
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -813,7 +813,7 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => navigate({ to: "/app/admin", replace: true })}
-                className="flex items-center gap-4 p-4 rounded-2xl border border-emerald-500/50 bg-gradient-to-r from-emerald-950/50 to-slate-900 hover:border-emerald-400 transition group text-left cursor-pointer"
+                className="flex items-center gap-4 p-4 rounded-2xl border border-emerald-500/50 bg-linear-to-r from-emerald-950/50 to-slate-900 hover:border-emerald-400 transition group text-left cursor-pointer"
               >
                 <div className="h-11 w-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
                   <LayoutDashboard className="h-5 w-5" />
