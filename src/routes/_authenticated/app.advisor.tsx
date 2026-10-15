@@ -109,19 +109,16 @@ export function AdvisorPage() {
     return "Farmer";
   }, [user]);
 
-  // Active Conversations State - Closed by default on all screens
   const [conversations, setConversations] = useState<ConversationSession[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showHistorySidebar, setShowHistorySidebar] = useState<boolean>(false);
   const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  // Active Message Stream State
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>("");
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [attachedImage, setAttachedImage] = useState<AttachedImageState | null>(null);
 
-  // Voice State
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [interimText, setInterimText] = useState<string>("");
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
@@ -136,7 +133,6 @@ export function AdvisorPage() {
     return user?.id ? `bluesky_advisor_conversations_${user.id}` : null;
   }, [user?.id]);
 
-  // Load user-specific conversations on login/mount
   useEffect(() => {
     if (!storageKey) {
       setConversations([]);
@@ -157,16 +153,16 @@ export function AdvisorPage() {
             setActiveConversationId(firstChat.id);
             setMessages(firstChat.messages || []);
           } else {
-            startNewConversation();
+            startNewConversation(false);
           }
         } else {
-          startNewConversation();
+          startNewConversation(false);
         }
       } else {
-        startNewConversation();
+        startNewConversation(false);
       }
     } catch {
-      startNewConversation();
+      startNewConversation(false);
     }
   }, [storageKey]);
 
@@ -177,7 +173,7 @@ export function AdvisorPage() {
     }
   };
 
-  const startNewConversation = () => {
+  const startNewConversation = (closeSidebarOnMobile = true) => {
     if (!user?.id) return;
     const newId = `conv-${Date.now()}`;
     const newConv: ConversationSession = {
@@ -196,7 +192,9 @@ export function AdvisorPage() {
     setMessages([]);
     setInputMessage("");
     setAttachedImage(null);
-    setShowHistorySidebar(false);
+    if (closeSidebarOnMobile) {
+      setShowHistorySidebar(false);
+    }
   };
 
   const switchConversation = (conv: ConversationSession) => {
@@ -218,7 +216,7 @@ export function AdvisorPage() {
       if (firstAvailable) {
         switchConversation(firstAvailable);
       } else {
-        startNewConversation();
+        startNewConversation(false);
       }
     }
   };
@@ -261,7 +259,7 @@ export function AdvisorPage() {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      toast.error("Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      toast.error("Voice input is not supported in this browser.");
       return;
     }
 
@@ -285,7 +283,7 @@ export function AdvisorPage() {
       recognition.onstart = () => {
         setVoiceStatus("recording");
         setInterimText("");
-        toast.info("Listening... Speak clearly about your crops.");
+        toast.info("Listening...");
       };
 
       recognition.onresult = (event: any) => {
@@ -312,15 +310,9 @@ export function AdvisorPage() {
         setInterimText(currentInterim);
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.onerror = () => {
         setVoiceStatus("idle");
         setInterimText("");
-
-        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-          toast.error("Microphone access denied. Please allow microphone permissions in your browser.");
-        } else if (event.error !== "no-speech" && event.error !== "aborted") {
-          toast.error(`Voice error: ${event.error || "Unable to transcribe"}`);
-        }
       };
 
       recognition.onend = () => {
@@ -332,7 +324,6 @@ export function AdvisorPage() {
     } catch {
       setVoiceStatus("idle");
       setInterimText("");
-      toast.error("Microphone initialization failed. Please type your message.");
     }
   };
 
@@ -356,10 +347,7 @@ export function AdvisorPage() {
   };
 
   const toggleSpeak = (messageId: string, rawText: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast.error("Audio playback is not supported in this browser.");
-      return;
-    }
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
     if (speakingMessageId === messageId) {
       window.speechSynthesis.cancel();
@@ -368,12 +356,7 @@ export function AdvisorPage() {
     }
 
     window.speechSynthesis.cancel();
-
-    const cleanSpokenText = rawText
-      .replace(/[#*_`>•]/g, "")
-      .replace(/\[.*?\]/g, "")
-      .trim();
-
+    const cleanSpokenText = rawText.replace(/[#*_`>•]/g, "").trim();
     const utterance = new SpeechSynthesisUtterance(cleanSpokenText);
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
@@ -420,6 +403,23 @@ export function AdvisorPage() {
     const textToSend = customText || inputMessage;
     if (!textToSend.trim() && !attachedImage) return;
 
+    let targetConvId = activeConversationId;
+    if (!targetConvId) {
+      const newId = `conv-${Date.now()}`;
+      const newConv: ConversationSession = {
+        id: newId,
+        userId: user?.id || "anon",
+        title: textToSend.trim().slice(0, 32) || "Farm Consultation",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isArchived: false,
+        messages: [],
+      };
+      setConversations((prev) => [newConv, ...prev]);
+      setActiveConversationId(newId);
+      targetConvId = newId;
+    }
+
     const currentImage = attachedImage;
     const userMsgId = `user-${Date.now()}`;
 
@@ -443,15 +443,15 @@ export function AdvisorPage() {
       textareaRef.current.style.height = "auto";
     }
 
-    const targetConvId = activeConversationId || `conv-${Date.now()}`;
     const generatedTitle =
       messages.length === 0
         ? textToSend.trim().slice(0, 36) + (textToSend.length > 36 ? "..." : "")
         : undefined;
 
     try {
+      // Natural, conversational, and direct system instruction
       const systemDirective =
-        "You are an expert South African Senior Agronomist and Plant Pathologist. Provide a detailed, in-depth, and thorough response. Explain root causes, specific organic remedies, Act 36 registered chemical active ingredients, soil management, and preventative measures. Do NOT use markdown asterisks (**) for bolding, do not use hashtags (##) for headings, and do not use backticks. Write in clean, highly readable, natural expert language structured with clean paragraphs and bullet points (using •).";
+        "You are a friendly, natural, and helpful South African agricultural expert. Keep your answers short, conversational, and straight to the point. Avoid long unnecessary paragraphs or overly formal lectures. If the user greets casually, reply casually and naturally. Do not use markdown asterisks or hashtags.";
 
       const combinedPrompt = `${systemDirective}\n\nFarmer Query: ${textToSend.trim()}`;
 
@@ -462,6 +462,7 @@ export function AdvisorPage() {
           imageBase64: currentImage?.base64 || "",
           imageMediaType: currentImage?.mediaType || "image/jpeg",
           farmerName,
+          usePerplexity: true,
         },
       });
 
@@ -487,7 +488,7 @@ export function AdvisorPage() {
         (typeof response.data === "string" ? response.data : "");
 
       if (!rawReply) {
-        throw new Error("The agronomic engine returned an empty response. Please try asking again.");
+        throw new Error("Received an empty response. Please try again.");
       }
 
       const sanitizedText = cleanAiResponse(rawReply);
@@ -502,47 +503,47 @@ export function AdvisorPage() {
       const finalStream = [...updatedStreamWithUser, advisorMessage];
       setMessages(finalStream);
 
-      const updatedConversations = conversations.map((conv) => {
-        if (conv.id === targetConvId) {
-          return {
-            ...conv,
-            title: generatedTitle || conv.title,
-            updatedAt: new Date().toISOString(),
-            messages: finalStream,
-          };
-        }
-        return conv;
-      });
-
-      persistConversations(updatedConversations);
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id === targetConvId) {
+            return {
+              ...conv,
+              title: generatedTitle || conv.title,
+              updatedAt: new Date().toISOString(),
+              messages: finalStream,
+            };
+          }
+          return conv;
+        })
+      );
     } catch (err: any) {
-      const errorMessage = err.message || "Failed to reach Agronomist AI service";
+      const errorMessage = err.message || "Failed to reach AI service";
       toast.error(errorMessage);
 
       const errorMsgItem: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: "advisor",
         isError: true,
-        text: `Diagnostic Note: Unable to complete analysis at this time.\n\n${errorMessage}\n\nPlease check your internet connection or retry your inquiry.`,
+        text: `Couldn't complete that right now: ${errorMessage}`,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
 
       const finalStreamWithError = [...updatedStreamWithUser, errorMsgItem];
       setMessages(finalStreamWithError);
 
-      const updatedConversations = conversations.map((conv) => {
-        if (conv.id === targetConvId) {
-          return {
-            ...conv,
-            title: generatedTitle || conv.title,
-            updatedAt: new Date().toISOString(),
-            messages: finalStreamWithError,
-          };
-        }
-        return conv;
-      });
-
-      persistConversations(updatedConversations);
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id === targetConvId) {
+            return {
+              ...conv,
+              title: generatedTitle || conv.title,
+              updatedAt: new Date().toISOString(),
+              messages: finalStreamWithError,
+            };
+          }
+          return conv;
+        })
+      );
     } finally {
       setIsTyping(false);
     }
@@ -556,7 +557,6 @@ export function AdvisorPage() {
 
   return (
     <div className="flex h-[calc(100vh-5.5rem)] max-w-7xl mx-auto px-2 sm:px-4 font-sans gap-0 md:gap-4 relative overflow-hidden">
-      {/* Slide-out History Drawer on Mobile, Collapsible Push Panel on Desktop */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 bg-white dark:bg-[#111720] border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-in-out md:relative md:inset-auto md:rounded-3xl md:border shadow-2xl md:shadow-none ${
           showHistorySidebar
@@ -565,7 +565,6 @@ export function AdvisorPage() {
         } ${showHistorySidebar ? "pointer-events-auto" : ""}`}
       >
         <div className="w-72 sm:w-80 flex flex-col h-full">
-          {/* History Header */}
           <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -577,8 +576,8 @@ export function AdvisorPage() {
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={startNewConversation}
-                title="Start New Conversation"
+                onClick={() => startNewConversation(true)}
+                title="Start New Chat"
                 className="p-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/80 transition cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
@@ -594,7 +593,6 @@ export function AdvisorPage() {
             </div>
           </div>
 
-          {/* Tab Toggle: Active vs Archived */}
           <div className="px-3 pt-3 flex gap-1">
             <button
               type="button"
@@ -621,7 +619,6 @@ export function AdvisorPage() {
             </button>
           </div>
 
-          {/* Conversation List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-1.5 scrollbar-none">
             {displayedConversations.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-400 space-y-2">
@@ -661,12 +658,11 @@ export function AdvisorPage() {
                         })}
                       </span>
 
-                      {/* Action buttons on hover */}
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                         <button
                           type="button"
                           onClick={(e) => toggleArchiveConversation(e, conv.id)}
-                          title={conv.isArchived ? "Restore to active" : "Archive chat"}
+                          title={conv.isArchived ? "Restore" : "Archive"}
                           className="p-1 hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer"
                         >
                           {conv.isArchived ? (
@@ -678,7 +674,7 @@ export function AdvisorPage() {
                         <button
                           type="button"
                           onClick={(e) => deleteConversation(e, conv.id)}
-                          title="Delete conversation"
+                          title="Delete"
                           className="p-1 hover:text-rose-500 transition cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -691,26 +687,23 @@ export function AdvisorPage() {
             )}
           </div>
 
-          {/* User Identity Footer */}
           <div className="p-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
             <span className="truncate max-w-[170px]">{farmerName}</span>
             <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-              Act 36 Verified
+              Perplexity Powered
             </span>
           </div>
         </div>
       </aside>
 
-      {/* Main Conversation Column */}
       <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#11161d] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-all duration-300">
-        {/* Top Control Bar with Drawer Trigger */}
         <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setShowHistorySidebar((prev) => !prev)}
               className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer flex items-center gap-1.5"
-              title={showHistorySidebar ? "Close History Sidebar" : "Open History Sidebar"}
+              title="Toggle History Sidebar"
             >
               {showHistorySidebar ? (
                 <PanelLeftClose className="h-4 w-4" />
@@ -729,7 +722,7 @@ export function AdvisorPage() {
 
           <button
             type="button"
-            onClick={startNewConversation}
+            onClick={() => startNewConversation(false)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -737,7 +730,6 @@ export function AdvisorPage() {
           </button>
         </div>
 
-        {/* Scrollable Conversation Stream */}
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5 scrollbar-none">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col justify-center items-center text-center px-4 space-y-7 animate-in fade-in duration-300">
@@ -746,7 +738,7 @@ export function AdvisorPage() {
                   Hello, {farmerName}
                 </h1>
                 <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
-                  Start an agronomic session. Chat about soil deficiencies, spray timing, pests, or upload a foliar photo.
+                  How can I help you in the fields today? Ask a question or snap a photo.
                 </p>
               </div>
 
@@ -755,7 +747,7 @@ export function AdvisorPage() {
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(item.title)}
-                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161d26]/80 hover:bg-slate-100 dark:hover:bg-[#1b2430] hover:border-slate-300 dark:hover:border-slate-700 transition group text-left space-y-1 cursor-pointer"
+                    className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-[#161d26]/80 hover:bg-slate-100 dark:hover:bg-[#1b2430] transition group text-left space-y-1 cursor-pointer"
                   >
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                       <span>{item.title}</span>
@@ -825,11 +817,11 @@ export function AdvisorPage() {
                             >
                               {isCurrentlySpeaking ? (
                                 <>
-                                  <VolumeX className="h-3.5 w-3.5" /> Stop Reading
+                                  <VolumeX className="h-3.5 w-3.5" /> Stop
                                 </>
                               ) : (
                                 <>
-                                  <Volume2 className="h-3.5 w-3.5" /> Read Aloud
+                                  <Volume2 className="h-3.5 w-3.5" /> Listen
                                 </>
                               )}
                             </button>
@@ -859,7 +851,6 @@ export function AdvisorPage() {
           <div ref={chatBottomRef} />
         </div>
 
-        {/* Bottom Input Area */}
         <div className="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
           {voiceStatus === "recording" && (
             <div className="flex items-center justify-between px-3.5 py-1.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 animate-in fade-in duration-150">
@@ -869,7 +860,7 @@ export function AdvisorPage() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
                 </span>
                 <span className="text-xs font-semibold text-rose-800 dark:text-rose-300">
-                  Recording audio... Tap red mic to finish
+                  Listening... Tap red mic to finish
                 </span>
               </div>
               {interimText && (
@@ -877,13 +868,6 @@ export function AdvisorPage() {
                   "{interimText}"
                 </span>
               )}
-            </div>
-          )}
-
-          {voiceStatus === "processing" && (
-            <div className="flex items-center gap-2 px-3.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300">
-              <Loader2 className="h-3 w-3 animate-spin text-emerald-600 dark:text-emerald-400" />
-              <span>Transcribing audio...</span>
             </div>
           )}
 
@@ -920,11 +904,7 @@ export function AdvisorPage() {
                   handleSendMessage();
                 }
               }}
-              placeholder={
-                voiceStatus === "recording"
-                  ? "Listening... Speak naturally."
-                  : "Ask a farm question, or tap mic to dictate..."
-              }
+              placeholder="Ask anything or tap mic..."
               className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none resize-none pr-24 max-h-36 leading-relaxed"
             />
 
@@ -932,7 +912,7 @@ export function AdvisorPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                title="Attach leaf or crop photo"
+                title="Attach photo"
                 className="p-1.5 rounded-full text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
               >
                 <ImageIcon className="h-4 w-4" />
@@ -949,7 +929,7 @@ export function AdvisorPage() {
               <button
                 type="button"
                 onClick={toggleListening}
-                title={voiceStatus === "recording" ? "Stop recording" : "Dictate by voice"}
+                title="Voice input"
                 className={`p-1.5 rounded-full transition cursor-pointer ${
                   voiceStatus === "recording"
                     ? "bg-rose-500 text-white shadow-md shadow-rose-500/40 animate-pulse"
