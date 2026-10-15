@@ -96,231 +96,6 @@ const STATIC_PATHOLOGY_DATABASE: PathologyItem[] = [
     withholdingPeriod: "7 - 14 days",
     highRiskSeason: "Early spring through late summer across all warm grain corridors",
   },
-  {
-    id: "citrus-black-spot",
-    name: "Citrus Black Spot (CBS)",
-    scientificName: "Phyllosticta citricarpa",
-    cropCategory: "Citrus",
-    type: "Fungal",
-    severity: "Critical",
-    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal", "Eastern Cape"],
-    symptoms: [
-      "Hard spot lesions: small, circular, sunken reddish-brown spots with gray centers",
-      "Virulent spot: large necrotic lesions spreading across mature rind surface",
-      "Premature fruit drop under elevated summer heat stress",
-    ],
-    organicProtocol:
-      "Apply Copper oxychloride or Copper hydroxide preventive sprays with organic spreader stickers every 21 days starting at petal drop.",
-    chemicalProtocol:
-      "Apply Mancozeb 800 WP combined with Strobilurins (e.g. Pyraclostrobin) on strict registered CRI export compliance schedules.",
-    preventativeMeasures: [
-      "Sweep and mulch decaying orchard floor leaf litter with mechanical sweepers",
-      "Prune interior water shoots to optimize airflow and sunlight penetration",
-      "Adhere strictly to official DAFF phytosanitary export protocols",
-    ],
-    withholdingPeriod: "30 - 45 days (Export compliance)",
-    highRiskSeason: "Spring blossom petal drop through mid-summer rainfall events",
-  },
-  {
-    id: "late-blight-tomato",
-    name: "Late Blight",
-    scientificName: "Phytophthora infestans",
-    cropCategory: "Tomato",
-    type: "Fungal",
-    severity: "Critical",
-    commonRegions: ["Limpopo", "Eastern Cape", "Western Cape", "Gauteng"],
-    symptoms: [
-      "Large, irregular water-soaked dark lesions on foliage turning rapidly brown and papery",
-      "Delicate white fungal downy mildew on leaf undersides during high relative humidity",
-      "Firm, greasy, olive-brown blotches on green and ripening tomato fruit",
-    ],
-    organicProtocol:
-      "Foliar sprays of certified Copper Octanoate or bio-control Trichoderma harzianum at first warning of cool humid weather.",
-    chemicalProtocol:
-      "Apply Metalaxyl-M + Mancozeb (Ridomil Gold) alternating with Cymoxanil or Dimethomorph to manage resistance.",
-    preventativeMeasures: [
-      "Utilize strict drip irrigation; avoid overhead sprinkler systems that wet foliage",
-      "Ensure minimum 1.5m row spacing for optimal ventilation",
-      "Destroy and bag culled infected vine residue immediately; do not compost",
-    ],
-    withholdingPeriod: "7 days",
-    highRiskSeason: "Cool, cloudy, and wet periods with relative humidity above 90%",
-  },
-  {
-    id: "bacterial-wilt-tomato",
-    name: "Bacterial Wilt",
-    scientificName: "Ralstonia solanacearum",
-    cropCategory: "Tomato",
-    type: "Bacterial",
-    severity: "Critical",
-    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal"],
-    symptoms: [
-      "Rapid wilting of fresh green foliage during warm afternoons without initial yellowing",
-      "Stems remain green while plants collapse permanently within 48-72 hours",
-      "Milky white bacterial streaming visible when lower stem section is immersed in clean water",
-    ],
-    organicProtocol:
-      "Incorporate high-glucosinolate bio-fumigant mustard crops prior to planting; treat soil with antagonistic Bacillus subtilis strains.",
-    chemicalProtocol:
-      "No effective registered chemical cure exists once vascular infection occurs. Pre-plant soil fumigation with Dazomet or 1,3-Dichloropropene.",
-    preventativeMeasures: [
-      "Test soil and borehole irrigation water for pathogen presence prior to transplanting",
-      "Graft commercial tomato scions onto resistant wild rootstocks",
-      "Avoid planting in fields previously cropped with solanaceous species for at least 4 years",
-    ],
-    withholdingPeriod: "Pre-plant only",
-    highRiskSeason: "Hot summer weather with high soil moisture and wet conditions",
-  },
-  {
-    id: "potato-scab",
-    name: "Common Potato Scab",
-    scientificName: "Streptomyces scabies",
-    cropCategory: "Potato",
-    type: "Bacterial",
-    severity: "Moderate",
-    commonRegions: ["Free State", "Limpopo", "Western Cape", "Sandveld"],
-    symptoms: [
-      "Rough, corky, pitted lesions on potato tuber skin reducing marketability",
-      "Star-shaped superficial lesions coalescing into large raised brown scabs",
-      "Stems and foliage remain completely asymptomatic above ground",
-    ],
-    organicProtocol:
-      "Soil application of elemental agricultural sulfur to lower soil pH below 5.2 where Streptomyces cannot proliferate.",
-    chemicalProtocol:
-      "Seed piece treatment with Fludioxonil + Mancozeb prior to planting in infected soil parcels.",
-    preventativeMeasures: [
-      "Maintain consistent, adequate soil moisture during the first 6 weeks of tuber initiation",
-      "Avoid applying untreated manure or agricultural lime immediately before potato planting",
-      "Rotate with rye, millet, or oats to suppress soil inoculant reservoirs",
-    ],
-    withholdingPeriod: "Pre-planting application",
-    highRiskSeason: "Dry, warm soil conditions during tuber initiation stages",
-  },
-  {
-    id: "black-rot-brassicas",
-    name: "Black Rot of Cabbage",
-    scientificName: "Xanthomonas campestris pv. campestris",
-    cropCategory: "Brassicas",
-    type: "Bacterial",
-    severity: "High",
-    commonRegions: ["Gauteng", "Limpopo", "North West", "Eastern Cape"],
-    symptoms: [
-      "Characteristic yellow V-shaped lesions progressing from leaf margins inward",
-      "Blackening of internal vascular leaf veins and cabbage core xylem",
-      "Foul odor and secondary soft rot decay under wet storage conditions",
-    ],
-    organicProtocol:
-      "Hot water seed treatment at 50°C for 25 minutes to eliminate seed-borne bacteria, followed by copper hydroxide sprays.",
-    chemicalProtocol:
-      "Preventive sprays of Copper hydroxide + Mancozeb applied every 7-10 days in warm wet weather.",
-    preventativeMeasures: [
-      "Use certified disease-free tested hybrid cabbage seeds",
-      "Control cruciferous weed hosts (wild mustard/radish) around field perimeters",
-      "Do not cultivate or walk through fields when foliage is wet from dew or rain",
-    ],
-    withholdingPeriod: "7 days",
-    highRiskSeason: "Warm, rainy periods with temperatures between 25°C and 30°C",
-  },
-  {
-    id: "phytophthora-root-rot-avocado",
-    name: "Phytophthora Root Rot",
-    scientificName: "Phytophthora cinnamomi",
-    cropCategory: "Avocado",
-    type: "Fungal",
-    severity: "Critical",
-    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal"],
-    symptoms: [
-      "Pale, wilted, yellowish leaves that remain small and drop prematurely",
-      "Dieback of feeder roots which turn black, brittle, and rotten",
-      "Canopy branch sun-scald and lack of new seasonal flush growth",
-    ],
-    organicProtocol:
-      "Heavy coarse woodchip mulching (15cm thick) away from trunk; apply mycorrhizal fungi and Trichoderma soil drenches.",
-    chemicalProtocol:
-      "Phosphonate (Potassium phosphite) trunk injections or foliar sprays timed to root flush periods according to tree phenology.",
-    preventativeMeasures: [
-      "Plant on high ridges or raised mounds to promote rapid root zone drainage",
-      "Use clonal tolerant rootstocks such as Dusa, Bounty, or Duke 7",
-      "Sanitize vehicle tires and footwear before entering orchard blocks",
-    ],
-    withholdingPeriod: "14 days",
-    highRiskSeason: "Waterlogged soil conditions during heavy spring and summer rains",
-  },
-  {
-    id: "macadamia-felted-coccid",
-    name: "Macadamia Felted Coccid (MFC)",
-    scientificName: "Eriococcus ironsidei",
-    cropCategory: "Macadamia",
-    type: "Pest / Insect",
-    severity: "High",
-    commonRegions: ["Mpumalanga", "Limpopo", "KwaZulu-Natal"],
-    symptoms: [
-      "White felt-like scale encrusting green shoots, flowers, nut husks, and branches",
-      "Severe distortion and stunting of new flush leaves and flowering racemes",
-      "Premature nut drop and branch dieback in dense interior canopy areas",
-    ],
-    organicProtocol:
-      "Application of high-grade narrow-range horticultural mineral spray oil (1.5-2%) to smother crawler nymphs.",
-    chemicalProtocol:
-      "Targeted sprays of Insect Growth Regulators (Pyriproxyfen 100 EC) or Spirotetramat during post-harvest crawler emergence.",
-    preventativeMeasures: [
-      "Prune out low, dense crossing branches to improve spray canopy penetration",
-      "Introduce and conserve natural ladybird predators (Chilocorus circumdatus)",
-      "Quarantine and inspect all incoming nursery trees before orchard introduction",
-    ],
-    withholdingPeriod: "28 days",
-    highRiskSeason: "Spring flush and early nut development through dry autumn months",
-  },
-  {
-    id: "sugarcane-smut",
-    name: "Sugarcane Smut",
-    scientificName: "Sporisorium scitamineum",
-    cropCategory: "Sugarcane",
-    type: "Fungal",
-    severity: "High",
-    commonRegions: ["KwaZulu-Natal", "Mpumalanga"],
-    symptoms: [
-      "Emergence of a distinct whip-like, curved black terminal shoot from the cane apex",
-      "Severe stunting and grass-like tillering with thin, elongated stalks",
-      "Loss of sucrose yield and rapid degradation of ratoon crop vigor",
-    ],
-    organicProtocol:
-      "Rogue out and destroy infected whips inside sealed plastic bags before spores disperse across the field.",
-    chemicalProtocol:
-      "Fungicidal hot-water treatment (Triadimefon dip at 52°C for 20 minutes) of seed cane setts prior to planting.",
-    preventativeMeasures: [
-      "Plant SASRI-recommended smut-resistant varieties (e.g., NCo376 alternatives)",
-      "Establish dedicated certified disease-free nursery seed-beds",
-      "Strict rogueing schedule of first and second ratoon crops",
-    ],
-    withholdingPeriod: "Pre-planting sett treatment",
-    highRiskSeason: "Hot, dry conditions followed by windy spells aiding spore dispersal",
-  },
-  {
-    id: "nitrogen-deficiency",
-    name: "Nitrogen (N) Deficiency",
-    scientificName: "Physiological Nutrient Deficiency",
-    cropCategory: "Maize",
-    type: "Nutrient Deficiency",
-    severity: "Moderate",
-    commonRegions: ["Nationwide across South Africa"],
-    symptoms: [
-      "General pale green to yellow chlorosis starting on the oldest lower leaves",
-      "Distinct V-shaped yellowing starting at the leaf tip and progressing along the midrib",
-      "Stunted crop growth, spindly stalks, and poor ear tip filling",
-    ],
-    organicProtocol:
-      "Incorporate well-rotted cattle kraal manure (10-15t/ha) or apply liquid fish hydrolysate and kelp meal extracts as foliar feeds.",
-    chemicalProtocol:
-      "Top-dress with Limestone Ammonium Nitrate (LAN 28% N) or Urea (46% N) at 4-6 leaf stage according to calibrated soil analysis targets.",
-    preventativeMeasures: [
-      "Conduct annual grid soil sampling to calculate realistic nitrogen replacement budgets",
-      "Split nitrogen applications between planting and top-dressing to minimize leaching",
-      "Incorporate winter cover crops (Hairy Vetch / Crimson Clover) to fix atmospheric nitrogen",
-    ],
-    withholdingPeriod: "0 days",
-    highRiskSeason: "Early vegetative growth stages following intense leaching rains",
-  },
 ];
 
 const CROP_CATEGORIES = ["All", "Maize", "Citrus", "Tomato", "Potato", "Avocado", "Brassicas", "Macadamia", "Sugarcane", "AI Research"];
@@ -466,14 +241,13 @@ function LibraryPage() {
 
     setIsAiSearching(true);
     try {
-      toast.info(`Querying Agronomist AI for: "${searchQuery}"...`);
+      toast.info(`Querying AI Research for: "${searchQuery}"...`);
 
+      // Calls the unified diagnose-crop Gemini Edge Function with a custom text prompt
       const { data, error } = await supabase.functions.invoke("diagnose-crop", {
         body: {
           crop: selectedCrop !== "All" ? selectedCrop : "South African Crops",
-          imageBase64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-          imageMediaType: "image/png",
-          customPrompt: `Provide an exhaustive agronomic dossier for this crop disease or pest: "${searchQuery}". Target Southern African agricultural conditions.`,
+          customPrompt: searchQuery,
         },
       });
 
@@ -502,7 +276,7 @@ function LibraryPage() {
         type: (data.pathogen_type || "Fungal") as any,
         severity: (data.severity || "Moderate") as any,
         commonRegions: ["South Africa (National Alert)"],
-        symptoms: data.symptoms_observed || ["Visual foliar symptoms synthesized by Agronomist AI"],
+        symptoms: data.symptoms_observed || ["Visual foliar symptoms synthesized by AI Research"],
         organicProtocol: data.organic_treatment || "Apply broad-spectrum bio-fungicide preventative.",
         chemicalProtocol: data.chemical_treatment || "Refer to registered Act 36 of 1947 agricultural chemicals.",
         preventativeMeasures: Array.isArray(data.preventative_measures)
@@ -544,61 +318,7 @@ function LibraryPage() {
       toast.success("AI Pathology Dossier compiled and published on top of the library!");
     } catch (err: any) {
       console.warn("AI Query fallback:", err.message);
-
-      const synthesizedItem: PathologyItem = {
-        id: `ai-${Date.now()}`,
-        name: `${searchQuery} (Agronomic Synthesis)`,
-        scientificName: "Pathogen / Physiological Stress Complex",
-        cropCategory: (selectedCrop !== "All" ? selectedCrop : "AI Research") as any,
-        type: "Fungal",
-        severity: "Moderate",
-        commonRegions: ["Gauteng", "Limpopo", "Mpumalanga", "North West"],
-        symptoms: [
-          `Foliar chlorosis and marginal necrosis associated with ${searchQuery}`,
-          "Canopy stunting and vascular transportation restriction",
-          "Reduced photosynthesis and premature senescent leaf drop",
-        ],
-        organicProtocol:
-          "Apply liquid copper chelate (2L/ha) combined with cold-pressed neem seed oil at early infection stage.",
-        chemicalProtocol:
-          "Apply registered systemic triazole/strobilurin combination fungicide with minimum 200L/ha water carrier volume.",
-        preventativeMeasures: [
-          "Ensure wide row spacing to maximize canopy air movement",
-          "Avoid overhead irrigation during late afternoon to keep leaf wetness duration short",
-          "Maintain strict 3-year crop rotation schedules",
-        ],
-        withholdingPeriod: "14 days",
-        highRiskSeason: "High-humidity and temperature inversion periods",
-        isLiveGenerated: true,
-        discoveredBy: currentFarmerName,
-        createdAt: new Date().toISOString(),
-      };
-
-      setCommunityPathogens((prev) => [synthesizedItem, ...prev]);
-      setActiveItem(synthesizedItem);
-
-      try {
-        await (supabase as any).from("pathology_library").insert({
-          id: synthesizedItem.id,
-          author_id: user?.id || null,
-          author_name: currentFarmerName,
-          name: synthesizedItem.name,
-          scientific_name: synthesizedItem.scientificName,
-          crop_category: synthesizedItem.cropCategory,
-          pathogen_type: synthesizedItem.type,
-          severity: synthesizedItem.severity,
-          common_regions: synthesizedItem.commonRegions,
-          symptoms: synthesizedItem.symptoms,
-          organic_protocol: synthesizedItem.organicProtocol,
-          chemical_protocol: synthesizedItem.chemicalProtocol,
-          preventative_measures: synthesizedItem.preventativeMeasures,
-          withholding_period: synthesizedItem.withholdingPeriod,
-          high_risk_season: synthesizedItem.highRiskSeason,
-          created_at: synthesizedItem.createdAt,
-        });
-      } catch (_) {}
-
-      toast.success("Dossier compiled and saved to the community codex!");
+      toast.error(err.message || "Failed to compile AI research dossier.");
     } finally {
       setIsAiSearching(false);
     }
@@ -639,7 +359,7 @@ function LibraryPage() {
               <BookOpen className="h-3.5 w-3.5" /> Pathology &amp; Pest Reference Center
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-50 dark:bg-cyan-500/10 text-[11px] font-medium text-cyan-700 dark:text-cyan-300">
-              <Bot className="h-3 w-3" /> Live Community Knowledge Base
+              <Bot className="h-3 w-3" /> AI Research Powered
             </span>
           </div>
 
@@ -647,7 +367,7 @@ function LibraryPage() {
             South African Crop Pathology &amp; Treatment Codex
           </h1>
           <p className="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            Exhaustive database of crop diseases, pests, and nutrient deficiencies. Any unlisted pathogen researched by any grower is automatically published on top for every farmer in real time.
+            Exhaustive database of crop diseases, pests, and nutrient deficiencies explained in simple terms for growers of all experience levels.
           </p>
         </div>
       </div>
@@ -729,7 +449,7 @@ function LibraryPage() {
             {isAiSearching ? (
               <>
                 <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                <span>Publishing to Library...</span>
+                <span>Researching with AI...</span>
               </>
             ) : (
               <>
@@ -750,7 +470,7 @@ function LibraryPage() {
           <div className="space-y-1">
             <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">No Record Matches "{searchQuery}"</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
-              Click below to compile a real-time dossier with AI. It will automatically publish on top of the codex for all farmers.
+              Click below to research this topic instantly using AI.
             </p>
           </div>
           <button
@@ -758,7 +478,7 @@ function LibraryPage() {
             disabled={isAiSearching}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-xs font-bold text-white hover:bg-emerald-500 transition cursor-pointer"
           >
-            <Sparkles className="h-4 w-4" /> Research &amp; Add "{searchQuery}" to Library
+            <Sparkles className="h-4 w-4" /> Research "{searchQuery}" with AI
           </button>
         </div>
       ) : (
@@ -774,7 +494,6 @@ function LibraryPage() {
               }`}
             >
               <div className="space-y-3">
-                {/* Badges Row */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300">
@@ -785,7 +504,7 @@ function LibraryPage() {
                     </span>
                     {item.isLiveGenerated && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/50 animate-pulse">
-                        <Sparkles className="h-2.5 w-2.5 text-cyan-600 dark:text-cyan-300" /> Community AI Discovery
+                        <Sparkles className="h-2.5 w-2.5 text-cyan-600 dark:text-cyan-300" /> AI Research
                       </span>
                     )}
                   </div>
@@ -798,7 +517,6 @@ function LibraryPage() {
                   </span>
                 </div>
 
-                {/* Name & Latin Binomial */}
                 <div>
                   <h3 className="font-bold text-base text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition line-clamp-1">
                     {item.name}
@@ -808,12 +526,10 @@ function LibraryPage() {
                   </p>
                 </div>
 
-                {/* Primary Symptom */}
                 <p className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed">
                   {item.symptoms[0]}
                 </p>
 
-                {/* Community metadata tag if researched by a farmer */}
                 {item.discoveredBy && (
                   <div className="text-[10px] text-cyan-700 dark:text-cyan-400/90 flex items-center gap-1.5 pt-1 font-medium">
                     <User className="h-3 w-3" />
@@ -822,7 +538,6 @@ function LibraryPage() {
                 )}
               </div>
 
-              {/* Card Bottom Bar */}
               <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-slate-400 dark:text-slate-500" />
@@ -842,7 +557,6 @@ function LibraryPage() {
       {activeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
           <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#161d26] p-6 sm:p-8 shadow-2xl text-slate-900 dark:text-slate-100 space-y-6">
-            {/* Close Button */}
             <button
               type="button"
               onClick={() => setActiveItem(null)}
@@ -852,7 +566,6 @@ function LibraryPage() {
               <X className="h-4 w-4" />
             </button>
 
-            {/* Modal Header */}
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
@@ -861,18 +574,9 @@ function LibraryPage() {
                 <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60">
                   {activeItem.type}
                 </span>
-                <span
-                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(
-                    activeItem.severity
-                  )}`}
-                >
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(activeItem.severity)}`}>
                   {activeItem.severity} Severity
                 </span>
-                {activeItem.isLiveGenerated && (
-                  <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-cyan-50 dark:bg-cyan-950/50 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-700 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-cyan-600 dark:text-cyan-400" /> Community Discovered
-                  </span>
-                )}
               </div>
 
               <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white">
@@ -883,7 +587,6 @@ function LibraryPage() {
               </p>
             </div>
 
-            {/* Quick Strip */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs">
               <div>
                 <span className="text-slate-500 dark:text-slate-400 font-medium block">Prevalent SA Regions:</span>
@@ -899,10 +602,9 @@ function LibraryPage() {
               </div>
             </div>
 
-            {/* Symptoms */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <Info className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Diagnostic Field Symptoms
+                <Info className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Simple Beginner-Friendly Symptoms
               </h4>
               <ul className="space-y-1.5">
                 {activeItem.symptoms.map((s, idx) => (
@@ -916,11 +618,10 @@ function LibraryPage() {
               </ul>
             </div>
 
-            {/* Regimens */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
-                  <Leaf className="h-4 w-4" /> Organic &amp; Biological Protocol
+                  <Leaf className="h-4 w-4" /> Organic &amp; Simple Home Remedy
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {activeItem.organicProtocol}
@@ -929,7 +630,7 @@ function LibraryPage() {
 
               <div className="rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-cyan-950/20 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400 font-bold text-xs uppercase tracking-wider">
-                  <FlaskConical className="h-4 w-4" /> Registered Chemical Regimen
+                  <FlaskConical className="h-4 w-4" /> Act 36 Chemical Regimen
                 </div>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {activeItem.chemicalProtocol}
@@ -937,10 +638,9 @@ function LibraryPage() {
               </div>
             </div>
 
-            {/* Prevention */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Integrated Pest Management (IPM) &amp; Prevention
+                <ShieldCheck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" /> Easy Prevention Steps for Growers
               </h4>
               <div className="space-y-1.5">
                 {activeItem.preventativeMeasures.map((pm, idx) => (
@@ -955,7 +655,6 @@ function LibraryPage() {
               </div>
             </div>
 
-            {/* Notice */}
             <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 p-4 text-[11px] text-slate-600 dark:text-slate-400 flex items-center justify-between">
               <div>
                 <strong className="text-slate-800 dark:text-slate-300">Pre-Harvest Withholding Period (PHI): </strong>
