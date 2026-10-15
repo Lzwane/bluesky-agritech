@@ -17,6 +17,7 @@ import {
   Scan,
   AlertTriangle,
   Loader2,
+  Camera,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,40 +68,42 @@ interface StoredScanRecord {
   safety_note?: string;
 }
 
-const COMMON_CROPS = [
-  "Maize / Corn",
-  "Tomato",
-  "Citrus (Oranges/Lemons)",
-  "Potato",
-  "Cabbage / Brassicas",
-  "Avocado",
-  "Sugarcane",
-  "Macadamia",
-  "Other / Unknown",
+const APPROVED_CROPS = [
+  { label: "I do not know / Unsure (Gemini Auto-Detect)", value: "unknown" },
+  { label: "Maize / Corn (Mielies)", value: "Maize / Corn" },
+  { label: "Tomato (Tamatie)", value: "Tomato" },
+  { label: "Citrus (Oranges / Lemons / Naartjies)", value: "Citrus" },
+  { label: "Potato (Aartappels)", value: "Potato" },
+  { label: "Cabbage / Brassicas", value: "Cabbage" },
+  { label: "Avocado", value: "Avocado" },
+  { label: "Sugarcane", value: "Sugarcane" },
+  { label: "Macadamia Nuts", value: "Macadamia" },
+  { label: "Soybean", value: "Soybean" },
+  { label: "Wheat", value: "Wheat" },
+  { label: "Dry Bean", value: "Dry Bean" },
 ];
 
 const SCAN_TELEMETRY_STEPS = [
   "Generating unique request signature...",
-  "Calibrating foliar spectrum...",
-  "Isolating lesion contours...",
-  "Cross-referencing Act 36 pathogen libraries...",
+  "Calibrating Gemini multimodal vision spectrum...",
+  "Isolating lesion contours and chlorosis...",
+  "Cross-referencing South African Act 36 pathogen libraries...",
 ];
 
 export function DiagnosisPage() {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const { checkLimit, isOwner, currentTier } = useTierAccess();
+  const { checkLimit } = useTierAccess();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeView, setActiveView] = useState<"diagnose" | "history">("diagnose");
-  const [selectedCrop, setSelectedCrop] = useState<string>("Maize / Corn");
+  const [selectedCrop, setSelectedCrop] = useState<string>("unknown");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imageMediaType, setImageMediaType] = useState<string>("image/jpeg");
   const [analyzing, setAnalyzing] = useState(false);
   const [report, setReport] = useState<DiagnosticReport | null>(null);
 
-  // Protection against double-clicking and duplicate submissions
   const isSubmittingRef = useRef<boolean>(false);
   const [telemetryIndex, setTelemetryIndex] = useState(0);
 
@@ -127,7 +130,7 @@ export function DiagnosisPage() {
     if (analyzing) {
       interval = setInterval(() => {
         setTelemetryIndex((prev) => (prev + 1) % SCAN_TELEMETRY_STEPS.length);
-      }, 1600);
+      }, 1500);
     }
     return () => clearInterval(interval);
   }, [analyzing]);
@@ -142,14 +145,12 @@ export function DiagnosisPage() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.warn("Supabase fetch history error:", error);
-      } else if (data) {
+      if (!error && data) {
         setHistoryList(data as unknown as StoredScanRecord[]);
         localStorage.setItem(`bluesky_diagnoses_history_${user.id}`, JSON.stringify(data));
       }
     } catch (err) {
-      console.error("Failed to load scan history:", err);
+      console.error("Failed to load history:", err);
     } finally {
       setLoadingHistory(false);
     }
@@ -168,26 +169,20 @@ export function DiagnosisPage() {
     const resolvedType = validTypes.includes(file.type) ? file.type : "image/jpeg";
     setImageMediaType(resolvedType);
 
-    const previewUrl = URL.createObjectURL(file);
-    setSelectedImage(previewUrl);
+    setSelectedImage(URL.createObjectURL(file));
     setReport(null);
 
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64String = typeof reader.result === "string" ? reader.result : "";
-      const base64Clean: string = base64String.includes(",")
-        ? base64String.split(",")[1] ?? base64String
-        : base64String;
-      if (base64Clean) {
-        setImageBase64(base64Clean);
-      }
+      const base64Clean = base64String.includes(",") ? base64String.split(",")[1] ?? base64String : base64String;
+      if (base64Clean) setImageBase64(base64Clean);
     };
     reader.readAsDataURL(file);
   };
 
   const extractDiagnosticReport = (raw: any): DiagnosticReport => {
     let parsed = raw;
-
     if (parsed && typeof parsed === "object") {
       if (parsed.diagnosis && typeof parsed.diagnosis === "object") parsed = parsed.diagnosis;
       else if (parsed.report && typeof parsed.report === "object") parsed = parsed.report;
@@ -196,94 +191,36 @@ export function DiagnosisPage() {
     }
 
     if (typeof parsed === "string") {
-      let cleaned = parsed.trim();
-      cleaned = cleaned.replace(/```json/gi, "").replace(/```/g, "").trim();
+      let cleaned = parsed.replace(/```json/gi, "").replace(/```/g, "").trim();
       try {
         parsed = JSON.parse(cleaned);
       } catch {
-        parsed = {
-          disease_name: "Field Foliar Observation",
-          symptoms_observed: [cleaned.slice(0, 180)],
-        };
+        parsed = { disease_name: "Foliar Observation", symptoms_observed: [cleaned.slice(0, 150)] };
       }
     }
 
-    const diseaseName =
-      parsed?.disease_name ||
-      parsed?.diagnosis ||
-      parsed?.condition ||
-      parsed?.disease ||
-      parsed?.name ||
-      parsed?.title ||
-      "Healthy Crop (No Active Pathogen)";
-
-    const scientificName =
-      parsed?.scientific_name ||
-      parsed?.pathogen ||
-      parsed?.latin_name ||
-      "Physiological or Asymptomatic Tissue";
-
-    const confidenceVal = Number(parsed?.confidence) || 94;
-
-    let severityVal: "Low" | "Moderate" | "High" | "Critical" = "Low";
-    const rawSev = String(parsed?.severity || "").toLowerCase();
-    if (rawSev.includes("crit")) severityVal = "Critical";
-    else if (rawSev.includes("high")) severityVal = "High";
-    else if (rawSev.includes("mod")) severityVal = "Moderate";
-    else if (rawSev.includes("low")) severityVal = "Low";
-
-    let symptoms: string[] = [];
-    if (Array.isArray(parsed?.symptoms_observed)) {
-      symptoms = parsed.symptoms_observed.map(String);
-    } else if (Array.isArray(parsed?.symptoms)) {
-      symptoms = parsed.symptoms.map(String);
-    } else if (typeof parsed?.symptoms === "string") {
-      symptoms = [parsed.symptoms];
-    } else if (typeof parsed?.description === "string") {
-      symptoms = [parsed.description];
-    } else {
-      symptoms = ["Normal foliar coloration", "No active lesions identified"];
-    }
-
+    const confidenceVal = Number(parsed?.confidence) || 88;
     return {
       requestId: parsed?.requestId,
-      crop: parsed?.crop || selectedCrop,
-      disease_name: diseaseName,
-      scientific_name: scientificName,
+      crop: parsed?.crop || (selectedCrop === "unknown" ? "Identified Crop" : selectedCrop),
+      disease_name: parsed?.disease_name || parsed?.condition || parsed?.disease || "Healthy Specimen",
+      scientific_name: parsed?.scientific_name || parsed?.pathogen || "Asymptomatic Foliar Tissue",
       confidence: confidenceVal > 1 ? confidenceVal : Math.round(confidenceVal * 100),
-      severity: severityVal,
+      severity: parsed?.severity || "Low",
       pathogen_type: parsed?.pathogen_type || parsed?.type || "Healthy",
-      symptoms_observed: symptoms,
-      organic_treatment:
-        parsed?.organic_treatment ||
-        parsed?.organic ||
-        "Maintain balanced soil nutrition and regular scouting intervals.",
-      chemical_treatment:
-        parsed?.chemical_treatment ||
-        parsed?.chemical ||
-        "No chemical fungicide or bactericide spray required at this stage.",
-      preventative_measures:
-        parsed?.preventative_measures ||
-        parsed?.prevention ||
-        "Continue standard drip irrigation management and monitor for early fungal spore arrivals.",
-      safety_note:
-        parsed?.safety_note ||
-        parsed?.safety ||
-        "Always wear calibrated PPE when handling agrochemicals registered under Act 36 of 1947.",
+      symptoms_observed: Array.isArray(parsed?.symptoms_observed) ? parsed.symptoms_observed : ["Normal foliar coloration"],
+      organic_treatment: parsed?.organic_treatment || "Maintain proper crop nutrition and hygiene.",
+      chemical_treatment: parsed?.chemical_treatment || "No chemical application required at this stage.",
+      preventative_measures: parsed?.preventative_measures || "Continue standard scouting intervals.",
+      safety_note: parsed?.safety_note || "AI diagnosis is not a replacement for a qualified agronomist. Always use approved Act 36 chemicals.",
     };
   };
 
   const handleRunDiagnosis = async () => {
-    // 1. Guard against double-clicking and duplicate submissions
-    if (isSubmittingRef.current || analyzing) {
-      console.warn("[Client Guard] Duplicate submission blocked.");
-      return;
-    }
+    if (isSubmittingRef.current || analyzing) return;
 
     const quotaCheck = await checkLimit("diagnosis");
-    if (!quotaCheck.allowed) {
-      return;
-    }
+    if (!quotaCheck.allowed) return;
 
     if (!imageBase64) {
       toast.error("Please upload or capture a crop image first.");
@@ -294,12 +231,9 @@ export function DiagnosisPage() {
     setAnalyzing(true);
     setReport(null);
 
-    // 2. Generate a unique request ID for tracking this exact submission payload
-    const uniqueRequestId = `diag-req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    console.log(`[Client] Initiating single diagnosis scan. Request ID: ${uniqueRequestId}`);
+    const uniqueRequestId = `gemini-req-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
     try {
-      // 3. Single Supabase Edge Function invocation (Guaranteed 1 request per scan)
       const response = await supabase.functions.invoke("diagnose-crop", {
         body: {
           requestId: uniqueRequestId,
@@ -307,6 +241,7 @@ export function DiagnosisPage() {
           imageMediaType,
           crop: selectedCrop,
           preferredLanguage: language,
+          useGemini: true,
         },
       });
 
@@ -324,30 +259,18 @@ export function DiagnosisPage() {
       const reportData: DiagnosticReport = extractDiagnosticReport(response.data);
       reportData.requestId = uniqueRequestId;
       setReport(reportData);
-      toast.success("Crop diagnosis generated successfully!");
+      toast.success("Gemini crop analysis completed successfully!");
 
       const scanId = `scan-${Date.now()}`;
       const newRecord: StoredScanRecord = {
         id: scanId,
         request_id: uniqueRequestId,
         created_at: new Date().toISOString(),
-        crop: reportData.crop || selectedCrop,
-        disease_name: reportData.disease_name,
-        scientific_name: reportData.scientific_name,
-        confidence: reportData.confidence,
-        severity: reportData.severity,
-        pathogen_type: reportData.pathogen_type,
-        symptoms_observed: reportData.symptoms_observed,
-        organic_treatment: reportData.organic_treatment,
-        chemical_treatment: reportData.chemical_treatment,
-        preventative_measures: reportData.preventative_measures,
-        safety_note: reportData.safety_note,
+        ...reportData,
       };
 
-      // 4. Save exactly one record to local state
       if (user?.id) {
         setHistoryList((prev) => {
-          // Prevent duplicates if already exists in state
           if (prev.some((p) => p.request_id === uniqueRequestId)) return prev;
           const updated = [newRecord, ...prev];
           localStorage.setItem(`bluesky_diagnoses_history_${user.id}`, JSON.stringify(updated));
@@ -357,45 +280,29 @@ export function DiagnosisPage() {
 
       window.dispatchEvent(new Event("bluesky_diagnosis_completed"));
 
-      // 5. Save exactly one record to database
       if (user?.id) {
-        const payload = {
-          user_id: user.id,
-          request_id: uniqueRequestId,
-          crop: newRecord.crop,
-          disease_name: newRecord.disease_name,
-          scientific_name: newRecord.scientific_name,
-          confidence: newRecord.confidence,
-          severity: newRecord.severity,
-          pathogen_type: newRecord.pathogen_type,
-          symptoms_observed: newRecord.symptoms_observed,
-          organic_treatment: newRecord.organic_treatment,
-          chemical_treatment: newRecord.chemical_treatment,
-          preventative_measures: newRecord.preventative_measures,
-          safety_note: newRecord.safety_note,
-          created_at: newRecord.created_at,
-        };
-
-        const { data: insertedData, error: insertErr } = await (supabase.from("diagnoses") as any)
-          .insert([payload])
-          .select();
-
-        if (insertErr) {
-          console.warn("Diagnosis database insertion notice:", insertErr.message);
-        } else if (insertedData && insertedData[0]?.id) {
-          const dbId = insertedData[0].id;
-          setHistoryList((prev) => {
-            const patched = prev.map((item) => (item.id === scanId ? { ...item, id: dbId } : item));
-            if (user?.id) {
-              localStorage.setItem(`bluesky_diagnoses_history_${user.id}`, JSON.stringify(patched));
-            }
-            return patched;
-          });
-        }
+        await (supabase.from("diagnoses") as any).insert([
+          {
+            user_id: user.id,
+            request_id: uniqueRequestId,
+            crop: newRecord.crop,
+            disease_name: newRecord.disease_name,
+            scientific_name: newRecord.scientific_name,
+            confidence: newRecord.confidence,
+            severity: newRecord.severity,
+            pathogen_type: newRecord.pathogen_type,
+            symptoms_observed: newRecord.symptoms_observed,
+            organic_treatment: newRecord.organic_treatment,
+            chemical_treatment: newRecord.chemical_treatment,
+            preventative_measures: newRecord.preventative_measures,
+            safety_note: newRecord.safety_note,
+            created_at: newRecord.created_at,
+          },
+        ]);
       }
     } catch (err: any) {
       console.error("DIAGNOSIS_FAILED:", err);
-      toast.error(err.message || "AI service currently unavailable. Please retry.");
+      toast.error(err.message || "Gemini diagnostic service unavailable.");
     } finally {
       setAnalyzing(false);
       isSubmittingRef.current = false;
@@ -419,28 +326,27 @@ export function DiagnosisPage() {
     <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 pb-16 font-sans">
       <TierBanner />
 
-      {/* Top Header & Tab Toggle */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 transition-colors">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Single-Request Pathologist Guard Active
+            <Sparkles className="h-3.5 w-3.5" /> Google Gemini Multimodal Vision Powered
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
             Visual Crop Diagnostic Engine
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Autonomous disease, pathogen, and nutrient deficiency recognition calibrated for South African agriculture.
+            Autonomous pathology identification, pest detection, and nutrient deficiency mapping.
           </p>
         </div>
 
-        {/* View Switcher */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#121822] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 shadow-inner transition-colors">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#121822] p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 shadow-inner">
           <button
             type="button"
             onClick={() => setActiveView("diagnose")}
             className={`cursor-pointer flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
               activeView === "diagnose"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20 dark:shadow-emerald-950/60"
+                ? "bg-emerald-600 text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
             }`}
           >
@@ -454,11 +360,11 @@ export function DiagnosisPage() {
             }}
             className={`cursor-pointer flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
               activeView === "history"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20 dark:shadow-emerald-950/60"
+                ? "bg-emerald-600 text-white shadow-md"
                 : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
             }`}
           >
-            <History className="h-3.5 w-3.5" /> Scan History ({historyList.length})
+            <History className="h-3.5 w-3.5" /> History ({historyList.length})
           </button>
         </div>
       </div>
@@ -467,7 +373,8 @@ export function DiagnosisPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Image Ingestion */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="rounded-3xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-[#161d26]/90 p-6 backdrop-blur-xl shadow-sm dark:shadow-xl space-y-5 transition-colors">
+            <div className="rounded-3xl border border-slate-200 dark:border-slate-700/70 bg-white dark:bg-[#161d26]/90 p-6 shadow-sm space-y-5">
+              {/* Crop Selector */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                   1. Select Target Crop
@@ -476,24 +383,40 @@ export function DiagnosisPage() {
                   value={selectedCrop}
                   disabled={analyzing}
                   onChange={(e) => setSelectedCrop(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/90 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium disabled:opacity-50"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none transition cursor-pointer font-medium disabled:opacity-50"
                 >
-                  {COMMON_CROPS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {APPROVED_CROPS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Upload Box */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                  2. Capture or Upload Field Photo
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    2. Upload or Retake Photo
+                  </label>
+                  {selectedImage && !analyzing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImage(null);
+                        setImageBase64(null);
+                        setReport(null);
+                      }}
+                      className="text-[11px] font-semibold text-rose-500 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <RefreshCw className="h-3 w-3" /> Replace Image
+                    </button>
+                  )}
+                </div>
 
                 <div
                   onClick={() => !analyzing && fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center transition relative overflow-hidden min-h-[290px] group ${
+                  className={`border-2 border-dashed rounded-2xl p-3 flex flex-col items-center justify-center transition relative overflow-hidden min-h-[270px] group ${
                     analyzing
                       ? "border-emerald-500 bg-emerald-50/30 dark:bg-slate-900/40 cursor-wait"
                       : selectedImage
@@ -506,49 +429,37 @@ export function DiagnosisPage() {
                       <img
                         src={selectedImage}
                         alt="Crop specimen"
-                        className="max-h-64 w-full object-contain rounded-xl shadow-sm"
+                        className="max-h-60 w-full object-contain rounded-xl shadow-sm"
                       />
 
                       {analyzing && (
-                        <div className="absolute inset-0 z-20 overflow-hidden rounded-xl bg-emerald-950/25 backdrop-blur-[1px] border border-emerald-500/50">
+                        <div className="absolute inset-0 z-20 overflow-hidden rounded-xl bg-emerald-950/30 backdrop-blur-[1px] border border-emerald-500/50">
                           <div
-                            className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#10b981] animate-pulse transition-all duration-300"
-                            style={{ animation: "scanLine 2.2s ease-in-out infinite" }}
+                            className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_20px_#10b981] animate-pulse"
+                            style={{ animation: "scanLine 2s ease-in-out infinite" }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-transparent to-emerald-500/20 pointer-events-none" />
-                          
-                          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-400 shadow-xs" />
-                          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-400 shadow-xs" />
-                          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-400 shadow-xs" />
-                          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-400 shadow-xs" />
+                          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-emerald-400" />
+                          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-emerald-400" />
+                          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-emerald-400" />
+                          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-emerald-400" />
 
-                          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 border border-emerald-500/60 px-3.5 py-1.5 rounded-full flex items-center gap-2 shadow-2xl backdrop-blur-md whitespace-nowrap">
+                          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 border border-emerald-500/60 px-3 py-1 rounded-full flex items-center gap-2 shadow-xl whitespace-nowrap">
                             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                            <span className="text-[11px] font-mono font-bold text-emerald-300 tracking-wide">
+                            <span className="text-[11px] font-mono font-bold text-emerald-300">
                               {SCAN_TELEMETRY_STEPS[telemetryIndex]}
                             </span>
                           </div>
                         </div>
                       )}
-
-                      {!analyzing && (
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-xl transition backdrop-blur-xs">
-                          <span className="text-xs font-bold text-white bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-700 shadow-md">
-                            Click to Change Photo
-                          </span>
-                        </div>
-                      )}
                     </div>
                   ) : (
                     <div className="text-center space-y-3 p-4">
-                      <div className="h-12 w-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto shadow-xs">
-                        <UploadCloud className="h-6 w-6" />
+                      <div className="h-12 w-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto">
+                        <Camera className="h-6 w-6" />
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Tap to browse or take leaf photo</p>
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          High-resolution close-ups of lesions perform best
-                        </p>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Tap to upload leaf photo</p>
+                        <p className="text-[11px] text-slate-500 mt-1">Supports JPG, PNG, WEBP</p>
                       </div>
                     </div>
                   )}
@@ -568,27 +479,32 @@ export function DiagnosisPage() {
               <button
                 onClick={handleRunDiagnosis}
                 disabled={analyzing || !selectedImage}
-                className="cursor-pointer w-full relative flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-xs font-bold text-white shadow-md transition hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3.5 px-4 text-xs font-bold text-white shadow-md transition hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {analyzing ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-white" />
-                    <span>Analyzing Specimen (1 Request)...</span>
+                    <span>Analyzing with Gemini AI...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-4 w-4" /> Run Deep Crop Diagnosis
+                    <Sparkles className="h-4 w-4" /> Run Gemini Diagnosis
                   </>
                 )}
               </button>
+
+              {/* Image Quality Guidance Notice moved cleanly to the bottom */}
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center leading-relaxed pt-1 border-t border-slate-100 dark:border-slate-800">
+                💡 For best accuracy, use clear, well-lit photos focusing closely on leaf lesions or stem symptoms. Avoid blurry shots.
+              </p>
             </div>
           </div>
 
-          {/* Right Column: Dynamic Diagnosis Report */}
+          {/* Right Column: Diagnostic Report */}
           <div className="lg:col-span-7">
             {report ? (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="rounded-3xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#161d26]/95 p-6 backdrop-blur-xl shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="rounded-3xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#161d26]/95 p-6 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 right-0 h-40 w-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
                   <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -597,16 +513,12 @@ export function DiagnosisPage() {
                         <CheckCircle2 className="h-4 w-4" />
                       </span>
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        Diagnostic Verdict
+                        Gemini Pathology Report
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(
-                          report.severity
-                        )}`}
-                      >
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(report.severity)}`}>
                         {report.severity} Severity
                       </span>
                       <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700 px-2.5 py-0.5 rounded-full border">
@@ -615,14 +527,13 @@ export function DiagnosisPage() {
                     </div>
                   </div>
 
-                  {/* Low Confidence Warning Prompt */}
                   {report.confidence < 75 && (
                     <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-amber-900 dark:text-amber-300 flex items-start gap-3">
                       <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
                       <div className="space-y-1">
                         <h4 className="font-bold text-xs uppercase tracking-wider">Low Confidence Warning</h4>
                         <p className="text-xs leading-relaxed">
-                          The confidence score is below 75%. Lighting, angle, or blur may impact accuracy. Consider uploading a sharper, well-lit photo of the upper and lower leaf surfaces.
+                          Confidence is below 75%. Image blur or poor lighting may impact accuracy. Consider uploading a sharper photo.
                         </p>
                       </div>
                     </div>
@@ -633,21 +544,17 @@ export function DiagnosisPage() {
                       {report.disease_name}
                     </h2>
                     <p className="text-xs italic text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                      {report.scientific_name} • {report.pathogen_type} {report.requestId ? `• ID: ${report.requestId.slice(-6)}` : ""}
+                      {report.scientific_name} • {report.pathogen_type} • Crop: {report.crop}
                     </p>
                   </div>
 
-                  {/* Symptoms Breakdown */}
                   <div className="mt-5 space-y-2">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                       Observed Visual Signatures
                     </span>
                     <div className="flex flex-wrap gap-2">
                       {report.symptoms_observed.map((symptom, idx) => (
-                        <span
-                          key={idx}
-                          className="rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300 shadow-2xs"
-                        >
+                        <span key={idx} className="rounded-lg bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 px-2.5 py-1 text-xs text-slate-700 dark:text-slate-300">
                           • {symptom}
                         </span>
                       ))}
@@ -655,19 +562,18 @@ export function DiagnosisPage() {
                   </div>
                 </div>
 
-                {/* Treatments */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-5 space-y-3 transition-colors">
+                  <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 p-5 space-y-3">
                     <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                       <Leaf className="h-4 w-4" />
-                      <h3 className="font-bold text-xs uppercase tracking-wider">Organic Protocol</h3>
+                      <h3 className="font-bold text-xs uppercase tracking-wider">Organic Treatment</h3>
                     </div>
                     <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                       {report.organic_treatment}
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-cyan-950/20 p-5 space-y-3 transition-colors">
+                  <div className="rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-cyan-50/50 dark:bg-cyan-950/20 p-5 space-y-3">
                     <div className="flex items-center gap-2 text-cyan-700 dark:text-cyan-400">
                       <FlaskConical className="h-4 w-4" />
                       <h3 className="font-bold text-xs uppercase tracking-wider">Chemical Regimen</h3>
@@ -678,8 +584,7 @@ export function DiagnosisPage() {
                   </div>
                 </div>
 
-                {/* Prevention */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#161d26]/80 p-5 space-y-3 shadow-xs transition-colors">
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-[#161d26]/80 p-5 space-y-3 shadow-xs">
                   <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                     <Calendar className="h-4 w-4" />
                     <h3 className="font-bold text-xs uppercase tracking-wider">Preventative Measures</h3>
@@ -689,54 +594,53 @@ export function DiagnosisPage() {
                   </p>
                 </div>
 
-                {/* Safety */}
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4 flex items-start gap-3 transition-colors">
+                {/* Mandatory Agronomist Disclaimer */}
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-4 flex items-start gap-3">
                   <ShieldAlert className="h-4 w-4 text-slate-500 dark:text-slate-400 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                    <strong className="text-slate-800 dark:text-slate-300">Agricultural Safety Notice: </strong>
+                    <strong className="text-slate-800 dark:text-slate-300">Agronomist Disclaimer: </strong>
                     {report.safety_note}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#121822]/40 p-12 text-center flex flex-col items-center justify-center min-h-[420px] space-y-3 shadow-xs transition-colors">
-                <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-600">
+              <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#121822]/40 p-12 text-center flex flex-col items-center justify-center min-h-[420px] space-y-3 shadow-xs">
+                <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400">
                   <Layers className="h-7 w-7" />
                 </div>
-                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-300">Diagnostic Monitor Idle</h3>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-300">Gemini Monitor Idle</h3>
                 <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
-                  Upload or photograph a leaf specimen on the left and select the target crop to trigger autonomous pathology inspection.
+                  Upload a crop photograph on the left to initiate Google Gemini AI pathology scanning.
                 </p>
               </div>
             )}
           </div>
         </div>
       ) : (
-        /* SCAN HISTORY VIEW */
         <div className="space-y-4">
           <div className="flex items-center justify-between pb-2">
             <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Previous Foliar Inspections
+              <History className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Past Diagnostic Records
             </h2>
             <button
               type="button"
               onClick={fetchScanHistory}
               className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <RefreshCw className="h-3 w-3" /> Refresh Records
+              <RefreshCw className="h-3 w-3" /> Refresh
             </button>
           </div>
 
           {loadingHistory ? (
-            <div className="h-60 flex items-center justify-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="h-60 flex items-center justify-center text-xs text-slate-500">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent mr-2" />
               Loading history...
             </div>
           ) : historyList.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#121822]/40 p-12 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2 shadow-xs transition-colors">
-              <Scan className="h-8 w-8 mx-auto text-slate-400 dark:text-slate-600 opacity-50" />
-              <p className="font-bold text-slate-800 dark:text-slate-300 text-sm">No inspection history found</p>
-              <p>Run a crop scan from the Scanner tab to build your foliar health record.</p>
+            <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-[#121822]/40 p-12 text-center text-xs text-slate-500 space-y-2">
+              <Scan className="h-8 w-8 mx-auto text-slate-400 opacity-50" />
+              <p className="font-bold text-slate-800 dark:text-slate-300 text-sm">No past scans found</p>
+              <p>Run a scan to populate your history.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -744,39 +648,31 @@ export function DiagnosisPage() {
                 <div
                   key={item.id}
                   onClick={() => setSelectedHistoryItem(item)}
-                  className="cursor-pointer group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131922] p-4.5 hover:border-emerald-500/50 hover:shadow-md dark:hover:bg-[#161f2c] transition flex flex-col justify-between space-y-4"
+                  className="cursor-pointer group rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#131922] p-4.5 hover:border-emerald-500/50 hover:shadow-md transition flex flex-col justify-between space-y-4"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-slate-400 dark:text-slate-500" />
-                        {new Date(item.created_at).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                      <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-slate-400" />
+                        {new Date(item.created_at).toLocaleDateString()}
                       </span>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSeverityBadge(
-                          item.severity
-                        )}`}
-                      >
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getSeverityBadge(item.severity)}`}>
                         {item.severity}
                       </span>
                     </div>
 
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition line-clamp-1">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition line-clamp-1">
                         {item.disease_name}
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Crop: <span className="text-slate-700 dark:text-slate-300 font-semibold">{item.crop}</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                    <span>Inspect Full Report</span>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <span>View Report</span>
                     <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition" />
                   </div>
                 </div>
@@ -786,43 +682,39 @@ export function DiagnosisPage() {
         </div>
       )}
 
-      {/* POPUP MODAL FOR INSPECTING PAST HISTORICAL REPORT */}
+      {/* Historical Report Modal */}
       {selectedHistoryItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/75 p-4 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#161d26] p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Historical Folio Diagnostic</h3>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Historical Diagnostic Report</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedHistoryItem(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer transition"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <div>
-              <span
-                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(
-                  selectedHistoryItem.severity
-                )}`}
-              >
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${getSeverityBadge(selectedHistoryItem.severity)}`}>
                 {selectedHistoryItem.severity} Severity
               </span>
               <h2 className="text-xl font-extrabold text-slate-900 dark:text-white mt-2">
                 {selectedHistoryItem.disease_name}
               </h2>
               <p className="text-xs font-mono italic text-slate-500 dark:text-slate-400">
-                {selectedHistoryItem.scientific_name} • {selectedHistoryItem.pathogen_type} • Crop: {selectedHistoryItem.crop}
+                {selectedHistoryItem.scientific_name} • Crop: {selectedHistoryItem.crop}
               </p>
             </div>
 
             {selectedHistoryItem.symptoms_observed && selectedHistoryItem.symptoms_observed.length > 0 && (
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
                   Symptoms Observed
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -841,7 +733,7 @@ export function DiagnosisPage() {
                   <Leaf className="h-3.5 w-3.5" /> Organic Treatment
                 </h4>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {selectedHistoryItem.organic_treatment || "No specific organic treatment recorded."}
+                  {selectedHistoryItem.organic_treatment}
                 </p>
               </div>
 
@@ -850,38 +742,27 @@ export function DiagnosisPage() {
                   <FlaskConical className="h-3.5 w-3.5" /> Chemical Regimen
                 </h4>
                 <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {selectedHistoryItem.chemical_treatment || "No specific chemical treatment recorded."}
+                  {selectedHistoryItem.chemical_treatment}
                 </p>
               </div>
             </div>
-
-            {selectedHistoryItem.preventative_measures && (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-1">
-                <h4 className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" /> Preventative Measures
-                </h4>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {selectedHistoryItem.preventative_measures}
-                </p>
-              </div>
-            )}
 
             <button
               type="button"
               onClick={() => setSelectedHistoryItem(null)}
               className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-white transition cursor-pointer"
             >
-              Close Record
+              Close
             </button>
           </div>
         </div>
       )}
 
-      {/* Global Keyframes for laser line */}
+      {/* Laser Scan Keyframes */}
       <style>{`
         @keyframes scanLine {
           0% { top: 2%; opacity: 0.2; }
-          50% { top: 96%; opacity: 1; }
+          50% { top: 94%; opacity: 1; }
           100% { top: 2%; opacity: 0.2; }
         }
       `}</style>

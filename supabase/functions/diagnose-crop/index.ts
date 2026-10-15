@@ -1,5 +1,6 @@
 // deno-lint-ignore-file
 declare const Deno: any;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -12,142 +13,107 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { crop, imageBase64, imageMediaType, customPrompt, farmerName, preferredLanguage } = body;
+    const { crop, imageBase64, imageMediaType } = body;
 
-    const apiKey = Deno.env.get("GROQ_API_KEY");
-    const isScanningRequest = Boolean(imageBase64 && !customPrompt?.includes("Conversation History"));
-    let aiResultText = "";
+    const apiKey = Deno.env.get("VITE_GEMINI_API_KEY") || Deno.env.get("GEMINI_API_KEY");
+    
+    if (!apiKey) {
+      throw new Error("Gemini API key is missing in Supabase Edge Function secrets.");
+    }
 
-    if (apiKey) {
-      try {
-        const systemPrompt = isScanningRequest
-          ? `You are an expert plant pathologist for Southern African agriculture. Analyze this ${crop || "crop"} leaf specimen. Return valid JSON only with keys:
+    if (!imageBase64) {
+      throw new Error("No image data received.");
+    }
+
+    const systemPrompt = `You are an expert senior agricultural plant pathologist for South Africa. Analyze this crop leaf specimen image very carefully.
+Target Crop selected by user: "${crop || 'unknown'}". 
+
+Provide a precise, unique diagnosis based strictly on the visual evidence in the uploaded photo. Do not output generic placeholders.
+
+Return your response STRICTLY as a valid JSON object without markdown formatting blocks (no \`\`\`json). Use these exact keys:
 {
-  "disease_name": "Identified disease or Healthy",
-  "scientific_name": "Latin scientific name",
+  "crop": "Verified crop name",
+  "disease_name": "Exact disease name, pest species, or nutrient deficiency observed",
+  "scientific_name": "Accurate binomial Latin scientific name",
   "confidence": 92,
-  "severity": "Low | Moderate | High | Critical",
-  "pathogen_type": "Fungal | Bacterial | Viral | Pest Infestation | Nutrient Deficiency | Healthy",
-  "symptoms_observed": ["list of symptoms observed"],
-  "organic_treatment": "organic control measures",
-  "chemical_treatment": "Act 36 of 1947 registered compounds",
-  "preventative_measures": "practical field steps",
-  "safety_note": "PPE and withholding period advice"
-}`
-          : `You are BlueSky AgriTech AI, a precise, concise, and direct AI agronomist assistant. 
-Strict Rules:
-1. Answer ONLY what the user asked. Keep responses short, direct, and conversational (like Gemini or ChatGPT).
-2. DO NOT over-explain or add unnecessary paragraphs.
-3. DO NOT add unsolicited follow-up suggestions, lists of recommended next questions, or conversational filler like "Let me know if you need anything else!".
-4. Communicate in ${preferredLanguage || "English"}.`;
+  "severity": "Low",
+  "pathogen_type": "Fungal",
+  "symptoms_observed": ["Specific symptom 1", "Specific symptom 2", "Specific symptom 3"],
+  "organic_treatment": "Practical organic or cultural control method.",
+  "chemical_treatment": "Specific chemical active ingredient registered under South Africa's Act 36 of 1947.",
+  "preventative_measures": "Long-term agronomic prevention strategy.",
+  "safety_note": "Mandatory safety disclaimer regarding Act 36 handling and PPE."
+}`;
 
-        const userTextContent = isScanningRequest
-          ? `Analyze this ${crop || "crop"} leaf specimen. Provide symptoms, organic control, and Act 36 chemical remedies. Return valid JSON only.`
-          : (customPrompt || `Farmer asks: How do I manage my crops?`);
-
-        const messages: any[] = [
-          { role: "system", content: systemPrompt }
-        ];
-
-        if (isScanningRequest && imageBase64) {
-          messages.push({
-            role: "user",
-            content: [
-              { type: "text", text: userTextContent },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${imageMediaType || "image/jpeg"};base64,${imageBase64}`
-                }
-              }
-            ]
-          });
-        } else {
-          messages.push({ role: "user", content: userTextContent });
-        }
-
-        const selectedModel = (isScanningRequest && imageBase64) 
-          ? "llama-3.2-90b-vision-preview" 
-          : "openai/gpt-oss-120b";
-
-        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey.trim()}`,
-            "Content-Type": "application/json",
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: systemPrompt },
+                {
+                  inline_data: {
+                    mime_type: imageMediaType || "image/jpeg",
+                    data: imageBase64,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 800,
           },
-          body: JSON.stringify({
-            model: selectedModel,
-            messages: messages,
-            temperature: 0.2,
-            max_tokens: 600, // Keeps answers short and punchy
-            ...(isScanningRequest ? { response_format: { type: "json_object" } } : {})
-          }),
-        });
-
-        if (res.ok) {
-          const resData = await res.json();
-          aiResultText = resData.choices?.[0]?.message?.content || "";
-        }
-      } catch (err) {
-        console.error("GROQ_FETCH_CATCH_ERROR:", err);
-      }
-    }
-
-    if (isScanningRequest) {
-      let parsedJson: any = null;
-      try {
-        const clean = aiResultText
-          .replace(/```json/gi, "")
-          .replace(/```/g, "")
-          .trim();
-        parsedJson = JSON.parse(clean);
-      } catch (_) {}
-
-      if (!parsedJson) {
-        parsedJson = {
-          disease_name: "Foliar Examination Complete",
-          scientific_name: "Asymptomatic Foliage",
-          confidence: 85,
-          severity: "Low",
-          pathogen_type: "Nutritional / Environmental Stress",
-          symptoms_observed: ["Early chlorotic margins", "Localized canopy stress"],
-          organic_treatment: "Apply foliar seaweed extract.",
-          chemical_treatment: "Standard balanced NPK foliar spray.",
-          preventative_measures: "Test soil pH and maintain irrigation filtration.",
-          safety_note: "Wear calibrated PPE when handling Act 36 remedies.",
-        };
-      }
-
-      return new Response(
-        JSON.stringify({
-          ...parsedJson,
-          response: aiResultText || parsedJson.disease_name,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      }
+    );
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      throw new Error(`Gemini API error: ${errText}`);
     }
 
-    const finalChatResponse =
-      aiResultText || "Hello! How can I help?";
+    const data = await geminiRes.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+    // Clean and sanitize the JSON string to prevent unterminated string errors
+    const cleanText = rawText
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
+
+    let parsedJson;
+    try {
+      parsedJson = JSON.parse(cleanText);
+    } catch (_e) {
+      // Fallback sanitizer for unescaped newlines/quotes inside string values
+      const sanitized = cleanText
+        .replace(/[\u0000-\u001F]+/g, " ")
+        .replace(/\\n/g, " ")
+        .replace(/\\"/g, '"');
+      parsedJson = JSON.parse(sanitized);
+    }
 
     return new Response(
       JSON.stringify({
-        response: finalChatResponse,
-        reply: finalChatResponse,
-        text: finalChatResponse,
+        ...parsedJson,
+        response: rawText,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (err: any) {
+    console.error("DIAGNOSIS_REAL_ERROR:", err.message);
     return new Response(
-      JSON.stringify({
-        response: "AI service temporarily unavailable.",
-        disease_name: "Scan Processed",
-        confidence: 85,
-        symptoms_observed: ["General foliar observation"],
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: err.message }),
+      { 
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      }
     );
   }
 });
