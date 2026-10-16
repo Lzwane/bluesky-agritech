@@ -612,7 +612,8 @@ export function SettingsPage() {
             </p>
           </div>
 
-          {/* 30-Day Free Trial Tracker */}
+          {/* 30-Day Free Trial Tracker - Commented Out */}
+          {/*
           <div className="rounded-3xl border border-emerald-500/40 bg-white dark:bg-linear-to-br dark:from-[#131d27] dark:via-[#111922] dark:to-[#0d131a] p-6 sm:p-7 shadow-sm dark:shadow-2xl relative overflow-hidden transition-colors">
             <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
@@ -663,6 +664,7 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
+          */}
 
           {/* Tier Cards (R0, R100, R200) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

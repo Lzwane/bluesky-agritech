@@ -96,6 +96,231 @@ const STATIC_PATHOLOGY_DATABASE: PathologyItem[] = [
     withholdingPeriod: "7 - 14 days",
     highRiskSeason: "Early spring through late summer across all warm grain corridors",
   },
+  {
+    id: "citrus-black-spot",
+    name: "Citrus Black Spot (CBS)",
+    scientificName: "Phyllosticta citricarpa",
+    cropCategory: "Citrus",
+    type: "Fungal",
+    severity: "Critical",
+    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal", "Eastern Cape"],
+    symptoms: [
+      "Hard spot lesions: small, circular, sunken reddish-brown spots with gray centers",
+      "Virulent spot: large necrotic lesions spreading across mature rind surface",
+      "Premature fruit drop under elevated summer heat stress",
+    ],
+    organicProtocol:
+      "Apply Copper oxychloride or Copper hydroxide preventive sprays with organic spreader stickers every 21 days starting at petal drop.",
+    chemicalProtocol:
+      "Apply Mancozeb 800 WP combined with Strobilurins (e.g. Pyraclostrobin) on strict registered CRI export compliance schedules.",
+    preventativeMeasures: [
+      "Sweep and mulch decaying orchard floor leaf litter with mechanical sweepers",
+      "Prune interior water shoots to optimize airflow and sunlight penetration",
+      "Adhere strictly to official DAFF phytosanitary export protocols",
+    ],
+    withholdingPeriod: "30 - 45 days (Export compliance)",
+    highRiskSeason: "Spring blossom petal drop through mid-summer rainfall events",
+  },
+  {
+    id: "late-blight-tomato",
+    name: "Late Blight",
+    scientificName: "Phytophthora infestans",
+    cropCategory: "Tomato",
+    type: "Fungal",
+    severity: "Critical",
+    commonRegions: ["Limpopo", "Eastern Cape", "Western Cape", "Gauteng"],
+    symptoms: [
+      "Large, irregular water-soaked dark lesions on foliage turning rapidly brown and papery",
+      "Delicate white fungal downy mildew on leaf undersides during high relative humidity",
+      "Firm, greasy, olive-brown blotches on green and ripening tomato fruit",
+    ],
+    organicProtocol:
+      "Foliar sprays of certified Copper Octanoate or bio-control Trichoderma harzianum at first warning of cool humid weather.",
+    chemicalProtocol:
+      "Apply Metalaxyl-M + Mancozeb (Ridomil Gold) alternating with Cymoxanil or Dimethomorph to manage resistance.",
+    preventativeMeasures: [
+      "Utilize strict drip irrigation; avoid overhead sprinkler systems that wet foliage",
+      "Ensure minimum 1.5m row spacing for optimal ventilation",
+      "Destroy and bag culled infected vine residue immediately; do not compost",
+    ],
+    withholdingPeriod: "7 days",
+    highRiskSeason: "Cool, cloudy, and wet periods with relative humidity above 90%",
+  },
+  {
+    id: "bacterial-wilt-tomato",
+    name: "Bacterial Wilt",
+    scientificName: "Ralstonia solanacearum",
+    cropCategory: "Tomato",
+    type: "Bacterial",
+    severity: "Critical",
+    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal"],
+    symptoms: [
+      "Rapid wilting of fresh green foliage during warm afternoons without initial yellowing",
+      "Stems remain green while plants collapse permanently within 48-72 hours",
+      "Milky white bacterial streaming visible when lower stem section is immersed in clean water",
+    ],
+    organicProtocol:
+      "Incorporate high-glucosinolate bio-fumigant mustard crops prior to planting; treat soil with antagonistic Bacillus subtilis strains.",
+    chemicalProtocol:
+      "No effective registered chemical cure exists once vascular infection occurs. Pre-plant soil fumigation with Dazomet or 1,3-Dichloropropene.",
+    preventativeMeasures: [
+      "Test soil and borehole irrigation water for pathogen presence prior to transplanting",
+      "Graft commercial tomato scions onto resistant wild rootstocks",
+      "Avoid planting in fields previously cropped with solanaceous species for at least 4 years",
+    ],
+    withholdingPeriod: "Pre-plant only",
+    highRiskSeason: "Hot summer weather with high soil moisture and wet conditions",
+  },
+  {
+    id: "potato-scab",
+    name: "Common Potato Scab",
+    scientificName: "Streptomyces scabies",
+    cropCategory: "Potato",
+    type: "Bacterial",
+    severity: "Moderate",
+    commonRegions: ["Free State", "Limpopo", "Western Cape", "Sandveld"],
+    symptoms: [
+      "Rough, corky, pitted lesions on potato tuber skin reducing marketability",
+      "Star-shaped superficial lesions coalescing into large raised brown scabs",
+      "Stems and foliage remain completely asymptomatic above ground",
+    ],
+    organicProtocol:
+      "Soil application of elemental agricultural sulfur to lower soil pH below 5.2 where Streptomyces cannot proliferate.",
+    chemicalProtocol:
+      "Seed piece treatment with Fludioxonil + Mancozeb prior to planting in infected soil parcels.",
+    preventativeMeasures: [
+      "Maintain consistent, adequate soil moisture during the first 6 weeks of tuber initiation",
+      "Avoid applying untreated manure or agricultural lime immediately before potato planting",
+      "Rotate with rye, millet, or oats to suppress soil inoculant reservoirs",
+    ],
+    withholdingPeriod: "Pre-planting application",
+    highRiskSeason: "Dry, warm soil conditions during tuber initiation stages",
+  },
+  {
+    id: "black-rot-brassicas",
+    name: "Black Rot of Cabbage",
+    scientificName: "Xanthomonas campestris pv. campestris",
+    cropCategory: "Brassicas",
+    type: "Bacterial",
+    severity: "High",
+    commonRegions: ["Gauteng", "Limpopo", "North West", "Eastern Cape"],
+    symptoms: [
+      "Characteristic yellow V-shaped lesions progressing from leaf margins inward",
+      "Blackening of internal vascular leaf veins and cabbage core xylem",
+      "Foul odor and secondary soft rot decay under wet storage conditions",
+    ],
+    organicProtocol:
+      "Hot water seed treatment at 50°C for 25 minutes to eliminate seed-borne bacteria, followed by copper hydroxide sprays.",
+    chemicalProtocol:
+      "Preventive sprays of Copper hydroxide + Mancozeb applied every 7-10 days in warm wet weather.",
+    preventativeMeasures: [
+      "Use certified disease-free tested hybrid cabbage seeds",
+      "Control cruciferous weed hosts (wild mustard/radish) around field perimeters",
+      "Do not cultivate or walk through fields when foliage is wet from dew or rain",
+    ],
+    withholdingPeriod: "7 days",
+    highRiskSeason: "Warm, rainy periods with temperatures between 25°C and 30°C",
+  },
+  {
+    id: "phytophthora-root-rot-avocado",
+    name: "Phytophthora Root Rot",
+    scientificName: "Phytophthora cinnamomi",
+    cropCategory: "Avocado",
+    type: "Fungal",
+    severity: "Critical",
+    commonRegions: ["Limpopo", "Mpumalanga", "KwaZulu-Natal"],
+    symptoms: [
+      "Pale, wilted, yellowish leaves that remain small and drop prematurely",
+      "Dieback of feeder roots which turn black, brittle, and rotten",
+      "Canopy branch sun-scald and lack of new seasonal flush growth",
+    ],
+    organicProtocol:
+      "Heavy coarse woodchip mulching (15cm thick) away from trunk; apply mycorrhizal fungi and Trichoderma soil drenches.",
+    chemicalProtocol:
+      "Phosphonate (Potassium phosphite) trunk injections or foliar sprays timed to root flush periods according to tree phenology.",
+    preventativeMeasures: [
+      "Plant on high ridges or raised mounds to promote rapid root zone drainage",
+      "Use clonal tolerant rootstocks such as Dusa, Bounty, or Duke 7",
+      "Sanitize vehicle tires and footwear before entering orchard blocks",
+    ],
+    withholdingPeriod: "14 days",
+    highRiskSeason: "Waterlogged soil conditions during heavy spring and summer rains",
+  },
+  {
+    id: "macadamia-felted-coccid",
+    name: "Macadamia Felted Coccid (MFC)",
+    scientificName: "Eriococcus ironsidei",
+    cropCategory: "Macadamia",
+    type: "Pest / Insect",
+    severity: "High",
+    commonRegions: ["Mpumalanga", "Limpopo", "KwaZulu-Natal"],
+    symptoms: [
+      "White felt-like scale encrusting green shoots, flowers, nut husks, and branches",
+      "Severe distortion and stunting of new flush leaves and flowering racemes",
+      "Premature nut drop and branch dieback in dense interior canopy areas",
+    ],
+    organicProtocol:
+      "Application of high-grade narrow-range horticultural mineral spray oil (1.5-2%) to smother crawler nymphs.",
+    chemicalProtocol:
+      "Targeted sprays of Insect Growth Regulators (Pyriproxyfen 100 EC) or Spirotetramat during post-harvest crawler emergence.",
+    preventativeMeasures: [
+      "Prune out low, dense crossing branches to improve spray canopy penetration",
+      "Introduce and conserve natural ladybird predators (Chilocorus circumdatus)",
+      "Quarantine and inspect all incoming nursery trees before orchard introduction",
+    ],
+    withholdingPeriod: "28 days",
+    highRiskSeason: "Spring flush and early nut development through dry autumn months",
+  },
+  {
+    id: "sugarcane-smut",
+    name: "Sugarcane Smut",
+    scientificName: "Sporisorium scitamineum",
+    cropCategory: "Sugarcane",
+    type: "Fungal",
+    severity: "High",
+    commonRegions: ["KwaZulu-Natal", "Mpumalanga"],
+    symptoms: [
+      "Emergence of a distinct whip-like, curved black terminal shoot from the cane apex",
+      "Severe stunting and grass-like tillering with thin, elongated stalks",
+      "Loss of sucrose yield and rapid degradation of ratoon crop vigor",
+    ],
+    organicProtocol:
+      "Rogue out and destroy infected whips inside sealed plastic bags before spores disperse across the field.",
+    chemicalProtocol:
+      "Fungicidal hot-water treatment (Triadimefon dip at 52°C for 20 minutes) of seed cane setts prior to planting.",
+    preventativeMeasures: [
+      "Plant SASRI-recommended smut-resistant varieties (e.g., NCo376 alternatives)",
+      "Establish dedicated certified disease-free nursery seed-beds",
+      "Strict rogueing schedule of first and second ratoon crops",
+    ],
+    withholdingPeriod: "Pre-planting sett treatment",
+    highRiskSeason: "Hot, dry conditions followed by windy spells aiding spore dispersal",
+  },
+  {
+    id: "nitrogen-deficiency",
+    name: "Nitrogen (N) Deficiency",
+    scientificName: "Physiological Nutrient Deficiency",
+    cropCategory: "Maize",
+    type: "Nutrient Deficiency",
+    severity: "Moderate",
+    commonRegions: ["Nationwide across South Africa"],
+    symptoms: [
+      "General pale green to yellow chlorosis starting on the oldest lower leaves",
+      "Distinct V-shaped yellowing starting at the leaf tip and progressing along the midrib",
+      "Stunted crop growth, spindly stalks, and poor ear tip filling",
+    ],
+    organicProtocol:
+      "Incorporate well-rotted cattle kraal manure (10-15t/ha) or apply liquid fish hydrolysate and kelp meal extracts as foliar feeds.",
+    chemicalProtocol:
+      "Top-dress with Limestone Ammonium Nitrate (LAN 28% N) or Urea (46% N) at 4-6 leaf stage according to calibrated soil analysis targets.",
+    preventativeMeasures: [
+      "Conduct annual grid soil sampling to calculate realistic nitrogen replacement budgets",
+      "Split nitrogen applications between planting and top-dressing to minimize leaching",
+      "Incorporate winter cover crops (Hairy Vetch / Crimson Clover) to fix atmospheric nitrogen",
+    ],
+    withholdingPeriod: "0 days",
+    highRiskSeason: "Early vegetative growth stages following intense leaching rains",
+  },
 ];
 
 const CROP_CATEGORIES = ["All", "Maize", "Citrus", "Tomato", "Potato", "Avocado", "Brassicas", "Macadamia", "Sugarcane", "AI Research"];
@@ -212,6 +437,7 @@ function LibraryPage() {
     };
   }, []);
 
+  // Stagnant static database is placed directly below AI community pathogens
   const allItems = useMemo(() => {
     return [...communityPathogens, ...STATIC_PATHOLOGY_DATABASE];
   }, [communityPathogens]);
@@ -243,7 +469,6 @@ function LibraryPage() {
     try {
       toast.info(`Querying AI Research for: "${searchQuery}"...`);
 
-      // Calls the unified diagnose-crop Gemini Edge Function with a custom text prompt
       const { data, error } = await supabase.functions.invoke("diagnose-crop", {
         body: {
           crop: selectedCrop !== "All" ? selectedCrop : "South African Crops",
@@ -444,7 +669,7 @@ function LibraryPage() {
             type="button"
             onClick={handleAiDeepSearch}
             disabled={isAiSearching}
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-md hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 text-xs font-bold text-white shadow-md hover:from-emerald-500 hover:to-teal-500 transition active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {isAiSearching ? (
               <>
