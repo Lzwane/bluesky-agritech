@@ -17,8 +17,8 @@ const schema = z.object({
   imageMediaType: z.string().max(50).optional(),
 });
 
-// Perplexity models, tried in order; falls through if one is unavailable.
-const MODELS = ["sonar", "sonar-pro"];
+// Perplexity Agent API models, tried in order; falls through if one is unavailable.
+const MODELS = ["perplexity/sonar", "google/gemini-3.5-flash"];
 
 export const askAdvisor = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => schema.parse(data))
@@ -52,12 +52,12 @@ export const askAdvisor = createServerFn({ method: "POST" })
     if (msgs.length === 0) return { ok: false as const, message: "Please type a question." };
 
     for (const model of MODELS) {
-      const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      const response = await fetch("https://api.perplexity.ai/v1/responses", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model,
-          messages: [{ role: "system", content: systemPrompt }, ...msgs],
+          input: [{ role: "system", content: systemPrompt }, ...msgs],
         }),
       });
 
@@ -72,8 +72,13 @@ export const askAdvisor = createServerFn({ method: "POST" })
         continue; // try next model
       }
 
-      const payload = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-      const reply = payload.choices?.[0]?.message?.content?.trim();
+      const payload = (await response.json()) as {
+        output?: { type?: string; content?: { type?: string; text?: string }[] }[];
+      };
+      const reply = payload.output
+        ?.find((o) => o.type === "message")
+        ?.content?.find((c) => c.type === "output_text")
+        ?.text?.trim();
       if (reply) return { ok: true as const, reply };
     }
     return { ok: false as const, message: "The advisor could not answer that. Please retry." };
