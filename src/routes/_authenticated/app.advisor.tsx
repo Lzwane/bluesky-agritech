@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { askAdvisor } from "@/lib/advisor.functions";
 
 export const Route = createFileRoute("/_authenticated/app/advisor")({
   component: AdvisorPage,
@@ -449,47 +450,27 @@ export function AdvisorPage() {
         : undefined;
 
     try {
-      // Natural, conversational, and direct system instruction
-      const systemDirective =
-        "You are a friendly, natural, and helpful South African agricultural expert. Keep your answers short, conversational, and straight to the point. Avoid long unnecessary paragraphs or overly formal lectures. If the user greets casually, reply casually and naturally. Do not use markdown asterisks or hashtags.";
+      const history = updatedStreamWithUser
+        .filter((m) => !m.isError && m.text?.trim())
+        .slice(-20)
+        .map((m) => ({
+          role: (m.sender === "user" ? "user" : "assistant") as "user" | "assistant",
+          content: m.text,
+        }));
+      if (history.length === 0) history.push({ role: "user", content: "Please analyse this crop photo." });
 
-      const combinedPrompt = `${systemDirective}\n\nFarmer Query: ${textToSend.trim()}`;
-
-      const response = await supabase.functions.invoke("diagnose-crop", {
-        body: {
-          customPrompt: combinedPrompt,
-          message: textToSend.trim(),
-          imageBase64: currentImage?.base64 || "",
-          imageMediaType: currentImage?.mediaType || "image/jpeg",
-          farmerName,
-          usePerplexity: true,
+      const result = await askAdvisor({
+        data: {
+          messages: history,
+          language: "en",
+          farmerName: farmerName || undefined,
+          imageBase64: currentImage?.base64 || undefined,
+          imageMediaType: currentImage?.mediaType || undefined,
         },
       });
 
-      if (response.error) {
-        let detailedError = response.error.message;
-        try {
-          if ((response.error as any).context) {
-            const bodyJson = await (response.error as any).context.json();
-            detailedError = bodyJson.error || detailedError;
-          }
-        } catch (_) {}
-        throw new Error(detailedError);
-      }
-
-      if (response.data?.error) {
-        throw new Error(response.data.error);
-      }
-
-      const rawReply =
-        response.data?.reply ||
-        response.data?.response ||
-        response.data?.text ||
-        (typeof response.data === "string" ? response.data : "");
-
-      if (!rawReply) {
-        throw new Error("Received an empty response. Please try again.");
-      }
+      if (!result.ok) throw new Error(result.message);
+      const rawReply = result.reply;
 
       const sanitizedText = cleanAiResponse(rawReply);
 
