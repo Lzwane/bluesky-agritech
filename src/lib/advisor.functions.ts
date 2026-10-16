@@ -17,15 +17,12 @@ const schema = z.object({
   imageMediaType: z.string().max(50).optional(),
 });
 
-// Perplexity Agent API models, tried in order; falls through if one is unavailable.
-const MODELS = ["perplexity/sonar", "google/gemini-3.5-flash"];
-
 export const askAdvisor = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env["PERPLEXITY_API_KEY"];
+    const apiKey = process.env["GEMINI_API_KEY"] || process.env["VITE_GEMINI_API_KEY"];
     if (!apiKey) {
-      return { ok: false as const, message: "The AI advisor is not configured yet." };
+      return { ok: false as const, message: "The AI advisor is not configured yet. Missing Gemini API key." };
     }
 
     const systemPrompt = [
@@ -38,48 +35,59 @@ export const askAdvisor = createServerFn({ method: "POST" })
       `Reply in the user's selected language (ISO code: ${data.language}). If unsure, reply in English.`,
     ].join(" ");
 
-    const msgs: { role: string; content: string }[] = data.messages
+    const formattedHistory = data.messages
       .filter((m) => m.content.trim())
-      .map((m) => ({ role: m.role, content: m.content }));
+      .map((m) => `${m.role === "user" ? "Farmer" : "Advisor"}: ${m.content}`)
+      .join("\n\n");
 
-    if (data.imageBase64) {
-      // Perplexity sonar is text-only; let the farmer describe the photo instead.
-      const last = msgs[msgs.length - 1];
-      if (last?.role === "user") {
-        last.content = `${last.content || "Please advise on my crop."} (Note: I attached a crop photo, but photo analysis is not available on this advisor — please ask me to describe the symptoms if needed.)`;
-      }
-    }
-    if (msgs.length === 0) return { ok: false as const, message: "Please type a question." };
+    const fullPrompt = `${systemPrompt}\n\nConversation History:\n${formattedHistory}\n\nAdvisor:`;
 
-    for (const model of MODELS) {
-      const response = await fetch("https://api.perplexity.ai/v1/responses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          input: [{ role: "system", content: systemPrompt }, ...msgs],
-        }),
+    const parts: any[] = [{ text: fullPrompt }];
+
+    if (data.imageBase64 && data.imageBase64.trim()) {
+      parts.push({
+        inline_data: {
+          mime_type: data.imageMediaType || "image/jpeg",
+          data: data.imageBase64,
+        },
       });
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts }],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 800,
+            },
+          }),
+        }
+      );
 
       if (!response.ok) {
-        console.error("AI advisor error", model, response.status, await response.text());
+        const errText = await response.text();
+        console.error("Gemini AI advisor error status", response.status, errText);
         if (response.status === 429) {
           return { ok: false as const, message: "The advisor is busy right now. Please try again in a moment." };
         }
-        if (response.status === 401 || response.status === 403) {
-          return { ok: false as const, message: "The AI advisor key is invalid. Please check the Perplexity API key." };
-        }
-        continue; // try next model
+        return { ok: false as const, message: `The AI advisor encountered an error (${response.status}).` };
       }
 
-      const payload = (await response.json()) as {
-        output?: { type?: string; content?: { type?: string; text?: string }[] }[];
-      };
-      const reply = payload.output
-        ?.find((o) => o.type === "message")
-        ?.content?.find((c) => c.type === "output_text")
-        ?.text?.trim();
-      if (reply) return { ok: true as const, reply };
+      const payload = (await response.json()) as any;
+      const reply = payload?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+      if (reply) {
+        return { ok: true as const, reply };
+      }
+
+      return { ok: false as const, message: "The advisor received an empty response. Please retry." };
+    } catch (err: any) {
+      console.error("Gemini server function exception:", err);
+      return { ok: false as const, message: "Failed to connect to Gemini AI advisor." };
     }
-    return { ok: false as const, message: "The advisor could not answer that. Please retry." };
   });
