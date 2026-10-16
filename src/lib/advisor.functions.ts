@@ -18,7 +18,7 @@ const schema = z.object({
 });
 
 // Tried in order; falls through to the next only if a model is unavailable or errors.
-const MODELS = ["google/gemini-3.5-flash", "google/gemini-3.8-flash", "google/gemini-3-flash-preview"];
+const MODELS = ["google/gemini-3.8-flash", "google/gemini-3-flash-preview"];
 
 export const askAdvisor = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => schema.parse(data))
